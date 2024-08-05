@@ -143,7 +143,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Biased Feature Identification</span></span></a>
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Overview</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -177,9 +177,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview"><span class="header-section-number">2.1</span> Overview</a></li>
   <li><a href="#spatiallibd-example-dataset" id="toc-spatiallibd-example-dataset" class="nav-link" data-scroll-target="#spatiallibd-example-dataset"><span class="header-section-number">2.2</span> spatialLIBD example dataset</a></li>
   <li><a href="#feature-selection-comparison" id="toc-feature-selection-comparison" class="nav-link" data-scroll-target="#feature-selection-comparison"><span class="header-section-number">2.3</span> Feature selection comparison</a>
-  <ul>
-  <li><a href="#how-do-svgs-rank-in-each-model" id="toc-how-do-svgs-rank-in-each-model" class="nav-link" data-scroll-target="#how-do-svgs-rank-in-each-model"><span class="header-section-number">2.3.0.1</span> How do SVGs rank in each model?</a></li>
-  <li><a href="#are-top-ranked-genes-representative-of-layer-specific-differences-in-gene-expression" id="toc-are-top-ranked-genes-representative-of-layer-specific-differences-in-gene-expression" class="nav-link" data-scroll-target="#are-top-ranked-genes-representative-of-layer-specific-differences-in-gene-expression"><span class="header-section-number">2.3.0.2</span> Are top ranked genes representative of layer-specific differences in gene expression?</a></li>
+  <ul class="collapse">
+  <li><a href="#how-do-svgs-rank-in-each-model" id="toc-how-do-svgs-rank-in-each-model" class="nav-link" data-scroll-target="#how-do-svgs-rank-in-each-model"><span class="header-section-number">2.3.1</span> How do SVGs rank in each model?</a></li>
+  <li><a href="#are-top-ranked-genes-representative-of-layer-specific-differences-in-gene-expression" id="toc-are-top-ranked-genes-representative-of-layer-specific-differences-in-gene-expression" class="nav-link" data-scroll-target="#are-top-ranked-genes-representative-of-layer-specific-differences-in-gene-expression"><span class="header-section-number">2.3.2</span> Are top ranked genes representative of layer-specific differences in gene expression?</a></li>
   </ul></li>
   <li><a href="#influence-of-batch-in-binomial-deviance-model-output" id="toc-influence-of-batch-in-binomial-deviance-model-output" class="nav-link" data-scroll-target="#influence-of-batch-in-binomial-deviance-model-output"><span class="header-section-number">2.4</span> Influence of batch in binomial deviance model output</a></li>
   <li><a href="#confirm-with-spatial-expression-plots" id="toc-confirm-with-spatial-expression-plots" class="nav-link" data-scroll-target="#confirm-with-spatial-expression-plots"><span class="header-section-number">2.5</span> Confirm with spatial expression plots</a></li>
@@ -254,8 +254,8 @@ sample_id Br5292 Br5595 Br8100
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>bd <span class="ot">&lt;-</span> <span class="fu">devianceFeatureSelection</span>(spe, <span class="at">fam=</span><span class="st">"binomial"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<section id="how-do-svgs-rank-in-each-model" class="level4" data-number="2.3.0.1">
-<h4 data-number="2.3.0.1" class="anchored" data-anchor-id="how-do-svgs-rank-in-each-model"><span class="header-section-number">2.3.0.1</span> How do SVGs rank in each model?</h4>
+<section id="how-do-svgs-rank-in-each-model" class="level3" data-number="2.3.1">
+<h3 data-number="2.3.1" class="anchored" data-anchor-id="how-do-svgs-rank-in-each-model"><span class="header-section-number">2.3.1</span> How do SVGs rank in each model?</h3>
 <p><code>nnSVG</code> results</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>libd.svgs <span class="ot">=</span> <span class="fu">read.csv</span>(<span class="st">"processed-data/libd-all_nnSVG_p-05-features-df.csv"</span>, <span class="at">row.names=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -272,8 +272,8 @@ sample_id Br5292 Br5595 Br8100
 </div>
 </div>
 </section>
-<section id="are-top-ranked-genes-representative-of-layer-specific-differences-in-gene-expression" class="level4" data-number="2.3.0.2">
-<h4 data-number="2.3.0.2" class="anchored" data-anchor-id="are-top-ranked-genes-representative-of-layer-specific-differences-in-gene-expression"><span class="header-section-number">2.3.0.2</span> Are top ranked genes representative of layer-specific differences in gene expression?</h4>
+<section id="are-top-ranked-genes-representative-of-layer-specific-differences-in-gene-expression" class="level3" data-number="2.3.2">
+<h3 data-number="2.3.2" class="anchored" data-anchor-id="are-top-ranked-genes-representative-of-layer-specific-differences-in-gene-expression"><span class="header-section-number">2.3.2</span> Are top ranked genes representative of layer-specific differences in gene expression?</h3>
 <p>This is the goal because these features are input for spatial domain clustering where the goal is to identify DLPFC cortical layers.</p>
 <p>DLPFC layer markers were pulled from Huuki-Meyers et al 2024 Table S8.</p>
 <div class="cell">
@@ -786,8 +786,8 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="./index.html" class="pagination-link" aria-label="Biased Feature Identification">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Biased Feature Identification</span></span>
+      <a href="./index.html" class="pagination-link" aria-label="Overview">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Overview</span></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
