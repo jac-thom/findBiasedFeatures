@@ -1,0 +1,17 @@
+project: 
+  type: book
+  output-dir: docs
+
+book:
+  title: "Find Biased Features"
+  author: "jac-thom"
+  date: "Aug. 5, 2024"
+  chapters:
+    - index.qmd
+    - spatialLIBD.qmd
+    - mbv_slide.qmd
+    - mbv_subject.qmd
+
+format:
+  html:
+    theme: cosmo

@@ -1,0 +1,355 @@
+---
+title: "Rationale with spatialLIBD"
+format: 
+  html:
+    toc: true
+    toc-depth: 4
+echo: false
+editor: visual
+---
+
+```{r setup}
+#| output: false
+library(spatialLIBD)
+library(dplyr)
+library(ggplot2)
+library(scran)
+library(scry)
+library(ggspavis)
+library(gridExtra)
+library(ggrepel)
+source("code/helper_functions.r")
+set.seed(123)
+```
+
+## Overview
+
+Many feature selection methods are centered around identifying genes with highly variable expression across observations. Such methods often rely on modeling the mean-variance relationship and allow for the consideration of potential batch effects in these models.
+
+The thought is that by controlling for the variation in gene expression introduced by the technical batch variable (e.g., technical replicates, subject-based differences), we can focus on the genes with high biological variation.
+
+First we needed to select a feature selection method that can incorporate a batch variable into the model. To pick between two methods, we evaluated two different feature selection methods that fit this criteria based on how highly each model ranked the SVGs and how representative the top features for each model corresponded to known DLPFC layer markers.
+
+Having picked a feature selection method, next we compared the per-gene ranks and deviance values when the model was run with and without a batch effect.
+
+## spatialLIBD example dataset
+
+We elected to develop/explore this feature QC method in a sample DLPFC dataset available through the `spatialLIBD` package.
+
+SAY A BIT MORE ABOUT THIS DATASET
+
+```{r fake load spe}
+#| echo: true
+#| eval: false
+spe <- fetch_data(type = "spe")
+```
+
+```{r hidden load spe}
+spe <- readRDS("processed-data/spe_spatialLIBD_n12.rda")
+```
+
+This dataset has 3 subjects and 4 samples from each subject.
+
+```{r spe subject design}
+table(colData(spe)[,c("sample_id","subject")])
+```
+
+## Feature selection comparison
+
+Post-normalization model (performed on logcounts) assuming Poisson distribution (<https://www.nature.com/articles/nmeth.2645>).
+
+Features evaluated based on variance of model.
+
+```{r hvg model}
+#| echo: true
+decp <- modelGeneVarByPoisson(logcounts(spe))
+```
+
+```{r hvg model rank}
+decp$ensembl = rownames(decp)
+decp$rank = (nrow(decp)+1)-rank(decp$bio)
+top_hvgs <- getTopHVGs(decp, n = 3000)
+```
+
+Pre-normalization model (performed on raw counts) assuming binomial distribtion (<https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1861-6>).
+
+Features evaluated based on deviance residuals of model.
+
+```{r dev model}
+#| echo: true
+bd <- devianceFeatureSelection(spe, fam="binomial")
+```
+
+```{r dev model rank}
+bd.df = cbind.data.frame("gene"=rownames(bd),"gene_name"=rowData(bd)$gene_name,
+        "dev"= rowData(bd)$binomial_deviance,
+        "rank"=(nrow(bd)+1)-rank(rowData(bd)$binomial_deviance))
+rownames(bd.df) = bd.df$gene
+```
+
+#### How do SVGs rank in each model?
+
+`nnSVG` results
+
+```{r read svgs}
+#| echo: true
+libd.svgs = read.csv("processed-data/libd-all_nnSVG_p-05-features-df.csv", row.names=1)
+```
+
+```{r add svg to model dfs}
+decp$is_svg = factor(decp$ensembl %in% libd.svgs$gene_id, 
+                        levels=c(TRUE,FALSE), labels=c("SVGs","not SVGs"))
+bd.df$is_svg = factor(bd.df$gene %in% libd.svgs$gene_id, 
+                      levels=c(TRUE,FALSE), labels=c("SVGs","not SVGs"))
+```
+
+```{r plot var model}
+var1 <- ggplot(decp, aes(x=rank, y=bio, color=is_svg))+
+  geom_point(size=.5)+scale_color_manual(values=c("red","black"))+
+  labs(title="modelGeneVarByPoisson", 
+       y="variance", color="")+
+  theme_bw()+theme(legend.position="inside", legend.position.inside=c(.8,.8))
+```
+
+```{r plot dev model}
+dev1 <- ggplot(bd.df, aes(x=rank, y=dev, color=is_svg))+
+  geom_point(size=.5)+scale_color_manual(values=c("red","black"))+
+  labs(title="devianceFeatureSelection", 
+       y="deviance", color="")+
+  theme_bw()+theme(legend.position="inside", legend.position.inside=c(.8,.8),
+                   axis.text.y=element_text(size=6))
+```
+
+The poisson model performed on normalized counts and evaluating variance ranked some SVGs highly and other SVGs very low.
+
+The binomial model performed on raw counts and evaluating deviance ranked all SVGs very highly.
+
+```{r view models}
+#| fig-height: 3
+#| fig-width: 6
+grid.arrange(addSmallLegend(var1, textSize = 8), 
+             addSmallLegend(dev1, textSize = 8), ncol=2)
+```
+
+#### Are top ranked genes representative of layer-specific differences in gene expression?
+
+This is the goal because these features are input for spatial domain clustering where the goal is to identify DLPFC cortical layers.
+
+DLPFC layer markers were pulled from Huuki-Meyers et al 2024 Table S8.
+
+```{r read layer markers}
+#| echo: true
+lm.df = read.csv("processed-data/EXT_TableS8_sig_genes_FDR5perc_enrichment.csv")
+lm.df = filter(lm.df, spatial_domain_resolution=="Sp09", fdr<.05, stat>0) %>%
+  mutate(domain_simple=factor(test, levels=paste0("Sp09D0",c(1,2,3,5,8,4,7,6,9)),
+                              labels=c("L1","L1","L2","L3","L4","L5","L6","WM","WM")))
+```
+
+```{r prep colors}
+cols_cluster = c("#1f77b4FF","#aec7e8FF","#ff7f0eFF","#ffbb78FF","#2ca02cFF","#98df8aFF","#d62728FF")
+
+cols_7 = c(cols_cluster[c(4,2,1,5,6,7)],"grey40")
+```
+
+```{r label hvgs as lm}
+#modelGeneVarByPoisson
+is.lm = semi_join(lm.df[,c("gene","ensembl","domain_simple")], 
+                  as.data.frame(decp[top_hvgs,]),
+                  by=c("ensembl")) 
+
+not.lm = anti_join(filter(as.data.frame(decp[top_hvgs,]), ensembl %in% 
+                            setdiff(top_hvgs, is.lm$ensembl)), 
+                   is.lm, 
+                   by=c("ensembl")) %>%
+  mutate(domain_simple="none")
+
+decp.lm.df = bind_rows(is.lm, not.lm) %>% 
+  mutate(domain_simple=factor(domain_simple, 
+                              levels=c("L1","L2","L3","L4","L5","L6","WM","none")))
+```
+
+```{r plot hvg lm}
+var2 <- ggplot(decp.lm.df, aes(x=domain_simple, fill=domain_simple))+
+  geom_bar(stat="count", width=.7, color="black")+
+  scale_fill_manual(values=c(cols_7[1:3],"white",cols_7[4:7]))+
+  labs(x="DLPFC domain",y="# top genes", 
+       title="modelGeneVarByPoisson", fill="")+
+  theme_bw()+theme(legend.position="none")
+```
+
+```{r label dev as lm}
+#devianceFeatureSelection
+is.lm = semi_join(lm.df[,c("gene","ensembl","domain_simple")], 
+                  filter(bd.df, rank<=3000),
+                  by=c("ensembl"="gene")) 
+
+not.lm = anti_join(filter(bd.df, rank<=3000, 
+                          gene %in% setdiff(bd.df$gene, is.lm$ensembl)), 
+                   is.lm, 
+                   by=c("gene"="ensembl")) %>%
+  mutate(domain_simple="none") %>%
+  rename(ensembl=gene)
+
+bd.lm.df = bind_rows(is.lm, not.lm) %>% 
+  mutate(domain_simple=factor(domain_simple, 
+                              levels=c("L1","L2","L3","L4","L5","L6","WM","none")))
+```
+
+```{r plot dev lm}
+dev2 <- ggplot(bd.lm.df, aes(x=domain_simple, fill=domain_simple))+
+  geom_bar(stat="count", width=.7, color="black")+
+  scale_fill_manual(values=c(cols_7[1:3],"white",cols_7[4:7]))+
+  labs(x="DLPFC domain", y="# top genes", 
+       title="devianceFeatureSelection", fill="")+
+  theme_bw()+theme(legend.position="none")
+```
+
+Top genes selected from the poisson model were not representative of gene markers for key DLPFC layers/ spatial domains.
+
+Top genes selected from the binomial model constituted gene markers for the full range of DLPFC layers/ spatial domains.
+
+```{r view top genes as lm}
+#| fig-height: 3
+#| fig-width: 6
+grid.arrange(var2, dev2, ncol=2)
+```
+
+## Influence of batch in binomial deviance model output
+
+Having picked a feature selection method, next we compared the per-gene ranks and deviance values when the model was run with and without a batch effect.
+
+```{r dev model batch}
+#| echo: true
+bd.batch <- devianceFeatureSelection(spe, fam="binomial", batch=as.factor(spe$subject))
+```
+
+```{r dev model batch rank}
+bd.batch.df = cbind.data.frame("gene"=rownames(bd.batch),"gene_name"=rowData(bd.batch)$gene_name,
+        "dev"= rowData(bd.batch)$binomial_deviance,
+        "rank"=(nrow(bd.batch)+1)-rank(rowData(bd.batch)$binomial_deviance))
+rownames(bd.batch.df) = bd.batch.df$gene
+bd.batch.df$is_svg = factor(bd.batch.df$gene %in% libd.svgs$gene_id, 
+                      levels=c(TRUE,FALSE), labels=c("SVGs","not SVGs"))
+```
+
+```{r plot dev model}
+dev3 <- ggplot(bd.batch.df, aes(x=rank, y=dev, color=is_svg))+
+  geom_point(size=.5)+scale_color_manual(values=c("red","black"))+
+  labs(title="batch = subject", 
+       y="deviance", color="")+
+  theme_bw()+theme(legend.position="inside", legend.position.inside=c(.8,.8),
+                   axis.text.y=element_text(size=6))
+```
+
+SVGs are still highly ranked in batched results.
+
+```{r view dev models svgs}
+#| fig-height: 3
+#| fig-width: 6
+grid.arrange(addSmallLegend(dev1, textSize = 8)+ggtitle("batch = NULL"), 
+             addSmallLegend(dev3, textSize = 8), ncol=2)
+```
+
+Moving forward we will only examine the influence of batch inclusion on the SVGs.
+
+```{r join dev models}
+#| echo: true
+subject.df = left_join(bd.df, bd.batch.df,
+                       by=c("gene", "gene_name"),
+                       suffix=c("_default","_subject")) %>%
+  filter(gene %in% libd.svgs$gene_id)
+```
+
+We care about loss in deviance, relative to the post-correction value
+
+```{r dev diff}
+#| echo: true
+subject.df$d.diff = (subject.df[,"dev_default"]-subject.df[,"dev_subject"])/subject.df$dev_subject
+```
+
+```{r plot dev diff}
+delta1 <- ggplot(subject.df, aes(x=dev_default, y=dev_subject, color=d.diff))+
+  geom_point()+
+  geom_text_repel(data=filter(subject.df, d.diff>1), aes(label=gene_name))+
+  scale_x_log10()+scale_y_log10()+
+  scale_color_viridis_c(option="F", direction=-1)+
+  geom_abline(aes(slope=1, intercept=0), lty=2)+
+  labs(x="deviance (no batch)", y="deviance (batch)", title="\u0394 deviance")+
+  theme_bw()+theme(legend.position="inside", legend.position.inside=c(.1,.8))+
+  theme(legend.title = element_text(size = 10), 
+              legend.text  = element_text(size = 10),
+              legend.key.size = unit(.6, "lines"))
+```
+
+We care about an increase in rank
+
+```{r rank diff}
+#| echo: true
+subject.df$r.diff = subject.df[,"rank_subject"]-subject.df[,"rank_default"]
+```
+
+```{r plot rank diff}
+delta2 <- ggplot(subject.df, aes(x=rank_default, y=rank_subject, color=r.diff))+
+  geom_point()+scale_y_reverse()+
+  geom_text_repel(data=filter(subject.df, r.diff>1000), aes(label=gene_name))+
+  scale_color_viridis_c(option="F", direction=-1)+
+  geom_abline(aes(slope=-1, intercept=0), lty=2)+
+  labs(x="rank (no batch)",y="rank (batch)", title="\u0394 rank")+
+  theme_bw()+theme(legend.position="inside", legend.position.inside=c(.8,.8))+
+  theme(legend.title = element_text(size = 10), 
+              legend.text  = element_text(size = 10),
+              legend.key.size = unit(.6, "lines"))
+```
+
+```{r view diff plots}
+#| fig-height: 4
+#| fig-width: 7
+grid.arrange(delta1, delta2, 
+             ncol=2, top="Influence of batch")
+```
+
+Our approach suggests that there are 3 features within the spatialLIBD dataset that are SVGs and that exhibit strong reductions in deviance when subject/ brain donor is controlled for.
+
+## Confirm with spatial expression plots
+
+To confirm a strong influence of subject/ brain donor for these genes we looked at the spatial expression plots.
+
+Xist is a lncRNA that is robustly expressed in females due to its importance for X inactivation. The identification of Xist as a subject-biased gene indicates that our approach works as intended (picking up features with non-spatially relevant sources of variation). Although sex information is not provided in the spatialLIBD example dataset, we can be confident that
+
+```{r change sample ids}
+spe$tissue = as.character(factor(paste(spe$position, spe$replicate), 
+                                 levels=c("0 1","0 2","300 1","300 2"),
+                                 labels=c("s1","s2","s3","s4")))
+spe$sample_id = paste(spe$subject, spe$tissue)
+```
+
+```{r Xist spatial plot}
+#| fig-height: 7
+#| fig-width: 7
+#| warning: false
+plotSpots(spe, annotate="ENSG00000229807", assay="logcounts", 
+          sample_id="sample_id", point_size=.1)+ggtitle("XIST")+
+  scale_color_gradient(low='grey90', high='black')
+```
+
+The other two genes, MTRNR2L1 and MTRNR2L8, are also lncRNAs with an unknown biological function. These two features exhibit strong subject-biased expression and are also clearly enriched in certain spatial domains.
+
+These are perfect examples of features that may introduce noise if included in spatial domain clustering.
+
+```{r mtrnr2l1 spatial plot}
+#| fig-height: 7
+#| fig-width: 7
+#| warning: false
+plotSpots(spe, annotate="ENSG00000256618", assay="logcounts", 
+          sample_id="sample_id", point_size=.1)+ggtitle("MTRNR2L1")+
+  scale_color_gradient(low='grey90', high='black')
+```
+
+```{r mtrnr2l8 spatial plot}
+#| fig-height: 7
+#| fig-width: 7
+#| warning: false
+plotSpots(spe, annotate="ENSG00000255823", assay="logcounts", 
+          sample_id="sample_id", point_size=.1)+ggtitle("MTRNR2L8")+
+  scale_color_gradient(low='grey90', high='black')
+```
