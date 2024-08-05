@@ -1,0 +1,192 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Find Biased Features",
+    "section": "",
+    "text": "0.1 Background\nWhile analyzing a 10X Visium spatially resolved transcriptomics (SRT) dataset, we encountered a need for feature-based QC that could help optimize dimension reduction and/or clustering output.\nSpatially-sensitive feature selection methods specifically designed for SRT often out-perform tried-and-true feature selection methods developed for bulk or single-cell RNAseq. However, these approaches do not permit the consideration of user-defined batch effects that may be introducing technical noise and occluding or distorting biological variation.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Biased Feature Identification</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#the-problem",
+    "href": "index.html#the-problem",
+    "title": "Find Biased Features",
+    "section": "0.2 The problem",
+    "text": "0.2 The problem\nWe used nnSVG to select 2098 spatially variable genes (SVGs) on which to perform clustering with the goal of identifying clusters that strongly corresponded to the laminar domains in the DLPFC.\nUsing K=7 we observed that L5 and L6 were merged and that increasing the number of clusters (K=8) did not generate distinct clusters for L5 and L6.\nK=7\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nK=8\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nDLPFC layer markers pulled from a recent publication indicated that there was no lack of L5 or L6 markers in our spatially variable genes (SVGs).\n\n\n\n\n\n\n\n\n\nSupplementing the SVG list with the most significant layer markers (top 100 lowest FDR for each layer) adds 327 features input for clustering. However, the number of L5 and L6 markers only mildly increased, indicating that the most striking L5 and L6 markers were already included in the SVG list.\n\n\n[1] 327\n\n\n\n\n\n\n\n\n\n\n\nWe found that supplementing the SVGs with additional layer markers did not improve spatial domain clustering with PRECAST.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nWe hypothesized that a small number of features within the SVG list were capturing technical variation in gene expression and that these “noisy” features could be occluding the identification of separate L5 and L6 clusters.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Biased Feature Identification</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#the-goal",
+    "href": "index.html#the-goal",
+    "title": "Find Biased Features",
+    "section": "0.3 The goal",
+    "text": "0.3 The goal\nTo use a spatially insensitive feature selection method to characterize batch effects within our dataset, specifically identifying individual features that could be driving these effects. If such biased genes are present in the SVG list, removal of these features could improve spatial clustering.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Biased Feature Identification</span>"
+    ]
+  },
+  {
+    "objectID": "spatialLIBD.html",
+    "href": "spatialLIBD.html",
+    "title": "2  Rationale with spatialLIBD",
+    "section": "",
+    "text": "2.1 Overview\nMany feature selection methods are centered around identifying genes with highly variable expression across observations. Such methods often rely on modeling the mean-variance relationship and allow for the consideration of potential batch effects in these models.\nThe thought is that by controlling for the variation in gene expression introduced by the technical batch variable (e.g., technical replicates, subject-based differences), we can focus on the genes with high biological variation.\nFirst we needed to select a feature selection method that can incorporate a batch variable into the model. To pick between two methods, we evaluated two different feature selection methods that fit this criteria based on how highly each model ranked the SVGs and how representative the top features for each model corresponded to known DLPFC layer markers.\nHaving picked a feature selection method, next we compared the per-gene ranks and deviance values when the model was run with and without a batch effect.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Rationale with spatialLIBD</span>"
+    ]
+  },
+  {
+    "objectID": "spatialLIBD.html#spatiallibd-example-dataset",
+    "href": "spatialLIBD.html#spatiallibd-example-dataset",
+    "title": "2  Rationale with spatialLIBD",
+    "section": "2.2 spatialLIBD example dataset",
+    "text": "2.2 spatialLIBD example dataset\nWe elected to develop/explore this feature QC method in a sample DLPFC dataset available through the spatialLIBD package.\nSAY A BIT MORE ABOUT THIS DATASET\n\nspe &lt;- fetch_data(type = \"spe\")\n\nThis dataset has 3 subjects and 4 samples from each subject.\n\n\n         subject\nsample_id Br5292 Br5595 Br8100\n   151507   4226      0      0\n   151508   4384      0      0\n   151509   4789      0      0\n   151510   4634      0      0\n   151669      0   3661      0\n   151670      0   3498      0\n   151671      0   4110      0\n   151672      0   4015      0\n   151673      0      0   3639\n   151674      0      0   3673\n   151675      0      0   3592\n   151676      0      0   3460",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Rationale with spatialLIBD</span>"
+    ]
+  },
+  {
+    "objectID": "spatialLIBD.html#feature-selection-comparison",
+    "href": "spatialLIBD.html#feature-selection-comparison",
+    "title": "2  Rationale with spatialLIBD",
+    "section": "2.3 Feature selection comparison",
+    "text": "2.3 Feature selection comparison\nPost-normalization model (performed on logcounts) assuming Poisson distribution (https://www.nature.com/articles/nmeth.2645).\nFeatures evaluated based on variance of model.\n\ndecp &lt;- modelGeneVarByPoisson(logcounts(spe))\n\nPre-normalization model (performed on raw counts) assuming binomial distribtion (https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1861-6).\nFeatures evaluated based on deviance residuals of model.\n\nbd &lt;- devianceFeatureSelection(spe, fam=\"binomial\")\n\n\n2.3.0.1 How do SVGs rank in each model?\nnnSVG results\n\nlibd.svgs = read.csv(\"processed-data/libd-all_nnSVG_p-05-features-df.csv\", row.names=1)\n\nThe poisson model performed on normalized counts and evaluating variance ranked some SVGs highly and other SVGs very low.\nThe binomial model performed on raw counts and evaluating deviance ranked all SVGs very highly.\n\n\n\n\n\n\n\n\n\n\n\n2.3.0.2 Are top ranked genes representative of layer-specific differences in gene expression?\nThis is the goal because these features are input for spatial domain clustering where the goal is to identify DLPFC cortical layers.\nDLPFC layer markers were pulled from Huuki-Meyers et al 2024 Table S8.\n\nlm.df = read.csv(\"processed-data/EXT_TableS8_sig_genes_FDR5perc_enrichment.csv\")\nlm.df = filter(lm.df, spatial_domain_resolution==\"Sp09\", fdr&lt;.05, stat&gt;0) %&gt;%\n  mutate(domain_simple=factor(test, levels=paste0(\"Sp09D0\",c(1,2,3,5,8,4,7,6,9)),\n                              labels=c(\"L1\",\"L1\",\"L2\",\"L3\",\"L4\",\"L5\",\"L6\",\"WM\",\"WM\")))\n\nTop genes selected from the poisson model were not representative of gene markers for key DLPFC layers/ spatial domains.\nTop genes selected from the binomial model constituted gene markers for the full range of DLPFC layers/ spatial domains.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Rationale with spatialLIBD</span>"
+    ]
+  },
+  {
+    "objectID": "spatialLIBD.html#influence-of-batch-in-binomial-deviance-model-output",
+    "href": "spatialLIBD.html#influence-of-batch-in-binomial-deviance-model-output",
+    "title": "2  Rationale with spatialLIBD",
+    "section": "2.4 Influence of batch in binomial deviance model output",
+    "text": "2.4 Influence of batch in binomial deviance model output\nHaving picked a feature selection method, next we compared the per-gene ranks and deviance values when the model was run with and without a batch effect.\n\nbd.batch &lt;- devianceFeatureSelection(spe, fam=\"binomial\", batch=as.factor(spe$subject))\n\nSVGs are still highly ranked in batched results.\n\n\n\n\n\n\n\n\n\nMoving forward we will only examine the influence of batch inclusion on the SVGs.\n\nsubject.df = left_join(bd.df, bd.batch.df,\n                       by=c(\"gene\", \"gene_name\"),\n                       suffix=c(\"_default\",\"_subject\")) %&gt;%\n  filter(gene %in% libd.svgs$gene_id)\n\nWe care about loss in deviance, relative to the post-correction value\n\nsubject.df$d.diff = (subject.df[,\"dev_default\"]-subject.df[,\"dev_subject\"])/subject.df$dev_subject\n\nWe care about an increase in rank\n\nsubject.df$r.diff = subject.df[,\"rank_subject\"]-subject.df[,\"rank_default\"]\n\n\n\n\n\n\n\n\n\n\nOur approach suggests that there are 3 features within the spatialLIBD dataset that are SVGs and that exhibit strong reductions in deviance when subject/ brain donor is controlled for.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Rationale with spatialLIBD</span>"
+    ]
+  },
+  {
+    "objectID": "spatialLIBD.html#confirm-with-spatial-expression-plots",
+    "href": "spatialLIBD.html#confirm-with-spatial-expression-plots",
+    "title": "2  Rationale with spatialLIBD",
+    "section": "2.5 Confirm with spatial expression plots",
+    "text": "2.5 Confirm with spatial expression plots\nTo confirm a strong influence of subject/ brain donor for these genes we looked at the spatial expression plots.\nXist is a lncRNA that is robustly expressed in females due to its importance for X inactivation. The identification of Xist as a subject-biased gene indicates that our approach works as intended (picking up features with non-spatially relevant sources of variation). Although sex information is not provided in the spatialLIBD example dataset, we can be confident that\n\n\n\n\n\n\n\n\n\nThe other two genes, MTRNR2L1 and MTRNR2L8, are also lncRNAs with an unknown biological function. These two features exhibit strong subject-biased expression and are also clearly enriched in certain spatial domains.\nThese are perfect examples of features that may introduce noise if included in spatial domain clustering.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Rationale with spatialLIBD</span>"
+    ]
+  },
+  {
+    "objectID": "mbv_slide.html",
+    "href": "mbv_slide.html",
+    "title": "3  MBv: batch = slide",
+    "section": "",
+    "text": "3.1 Intro to MBv project",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>MBv: batch = slide</span>"
+    ]
+  },
+  {
+    "objectID": "mbv_slide.html#intro-to-mbv-project",
+    "href": "mbv_slide.html#intro-to-mbv-project",
+    "title": "3  MBv: batch = slide",
+    "section": "",
+    "text": "3.1.0.1 Goal of this analysis\nAs established in the Intro[LINK CHAPTER], the goal of this analysis is to perform feature-based QC to remove features contributing to non-spatially meaningful biological variation from our list of spatially variable genes (SVGs).\nAs we showed in the spatialLIBD example, using nnSVG or scry::devianceFeatureSelection produced feature lists that represented the spectrum of layer-specific markers in the DLPFC (FIGURE). Further, SVGs were the most highly ranked features based on deviance (FIGURE), when all genes were input to the model.\nBecause of this, we decided to run devianceFeatureSelection on only the SVGs.\n\n\n3.1.0.2 Experimental design\n24 human DLPFC samples, 1 sample per subject/ brain donor, 4 samples per slide (6 slides), 2 M 2 F each slide\nWe first investigated a slide effect.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>MBv: batch = slide</span>"
+    ]
+  },
+  {
+    "objectID": "mbv_slide.html#binomial-model-deviance-residuals",
+    "href": "mbv_slide.html#binomial-model-deviance-residuals",
+    "title": "3  MBv: batch = slide",
+    "section": "3.2 Binomial model deviance residuals",
+    "text": "3.2 Binomial model deviance residuals\nBased on\n\nslide.df = read.csv(\"processed-data/bindev_default-slide_svgs-only.csv\")\n\n\n\n\n\n\n\n\n\n\n\n#care about loss of deviance\nslide.df$d.diff = (slide.df[,\"dev_default\"]-slide.df[,\"dev_slide\"])/slide.df$dev_slide\n# care about increase in rank\nslide.df$r.diff = slide.df[,\"rank_slide\"]-slide.df[,\"rank_default\"]",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>MBv: batch = slide</span>"
+    ]
+  },
+  {
+    "objectID": "mbv_slide.html#examine-expression-with-dotplot",
+    "href": "mbv_slide.html#examine-expression-with-dotplot",
+    "title": "3  MBv: batch = slide",
+    "section": "3.3 Examine expression with dotplot",
+    "text": "3.3 Examine expression with dotplot\n\nbiased.genes = filter(slide.df, r.diff&gt;300 | d.diff&gt;.5)$gene\nnames(biased.genes) = rowData(spe)[biased.genes,\"gene_name\"]\n\n\n\nnorm.to.mbp=FALSE : avg expression values in logNormCounts\n\n\n\n\n\n\n\n\n\n\n\nTwo or three features show clear patterns of slide-biased expression (MTRNR2L12, AL627171.2, and partially MTRNR2L8).\nFor the remaining features (MTRNR2L1, SERPINA3, CHI3L1, C5orf63), although the average slide expression may indicate a slide batch effect, the dotplot suggests that individual samples drive these differences.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>MBv: batch = slide</span>"
+    ]
+  },
+  {
+    "objectID": "mbv_slide.html#spatial-expression-plots",
+    "href": "mbv_slide.html#spatial-expression-plots",
+    "title": "3  MBv: batch = slide",
+    "section": "3.4 Spatial expression plots",
+    "text": "3.4 Spatial expression plots\nLooking at the unscaled logNormCounts values in the context of the spatial dimension, we can confirm slide-biased expression of MTRNR2L12 and AL627171.2.\n\n\n\n\n\n\n\n\n\nHowever, MTRNR2L8 clearly is most influenced by sample-specific variation rather than slide.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>MBv: batch = slide</span>"
+    ]
+  },
+  {
+    "objectID": "mbv_slide.html#sample-specific-bias",
+    "href": "mbv_slide.html#sample-specific-bias",
+    "title": "3  MBv: batch = slide",
+    "section": "3.5 Sample-specific bias?",
+    "text": "3.5 Sample-specific bias?\nOur experimental design includes only 1 sample per subject, such that no two samples came from the same brain donor. Thus, batch effect of subject and sample are one and the same.\nAs we established with the spatialLIBD example, there can be subject-specific non-biologically meaningful (for spatial clustering) variation in gene expression.\nHowever, the concern with examining sample-specific variation in gene expression with our dataset is that there are between-sample differences in tissue composition (the proportion of spots corresponding to the different spatial domains). It would be problematic it using deviance residuals to identify sample-biased features identified key layer markers that have different expression across samples due to change in number of spots-per-sample comprising the different cortical layers.\nUsing the original raw SVG clustering outcome as a guide, we can see that Br5902 has a substantially higher proportion of WM spots than the other samples.\n\n\n\n\n\n\n\n\n\nNotably, Br5902 appears to contribute to the identification of MTRNR2L1, SERPINA3, and CHI3L1 as subject/sample-biased (dotplot above).\nWe observed that unlike standard WM markers (left), the expression of MTRNR2L1, SERPINA3, and CHI3L1 expression are relatively equal across different spatial domains, both within the apparent outlier Br5902 and in other slides/samples (right plot).\n\n\n\n\n\n\n\n\n\nTo confirm this, we again refer to the unscaled logNormCounts values with the spatial expression plots (showing only a subset of samples for simplicity).\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nThese data indicate that it is worth exploring a subject batch effect in our data, though we must examine a potential influence of tissue composition before proceeding.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>MBv: batch = slide</span>"
+    ]
+  },
+  {
+    "objectID": "mbv_subject.html",
+    "href": "mbv_subject.html",
+    "title": "4  MBv: batch = subject",
+    "section": "",
+    "text": "4.0.0.0.1 to do\nJACQUI YOU NEED TO CHANGE THE CLUSTER MARKER “BAD” TO “LOW UMI”\nBased on\nbrain.df = read.csv(\"processed-data/bindev_default-brain_svgs-only.csv\")",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>MBv: batch = subject</span>"
+    ]
+  },
+  {
+    "objectID": "mbv_subject.html#wm-influence-check",
+    "href": "mbv_subject.html#wm-influence-check",
+    "title": "4  MBv: batch = subject",
+    "section": "4.1 WM influence check",
+    "text": "4.1 WM influence check\nMake sure that top WM markers aren’t super different\n\n\n\n\n\n\n\n\n\nThis gives us initial assurance that our feature-based QC approach is not identifying features that exhibit differences in gene expression between subjects due to the layer composition of the sample.",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>MBv: batch = subject</span>"
+    ]
+  },
+  {
+    "objectID": "mbv_subject.html#find-subject-biased-features",
+    "href": "mbv_subject.html#find-subject-biased-features",
+    "title": "4  MBv: batch = subject",
+    "section": "4.2 Find subject-biased features",
+    "text": "4.2 Find subject-biased features\n\n# care about loss in deviance\nbrain.df$d.diff = (brain.df[,\"dev_default\"]-brain.df[,\"dev_brain\"])/brain.df$dev_brain\n# care about increase in rank\nbrain.df$r.diff = brain.df[,\"rank_brain\"]-brain.df[,\"rank_default\"]\n\n\n\n\n\n\n\n\n\n\n\n4.2.1 SD cutoff: deviance\n\nmean1 = mean(brain.df$d.diff)\nsd1 = sd(brain.df$d.diff)\nbrain.df$nSD_dev = (brain.df$d.diff-mean1)/sd1\nsummary(brain.df$nSD_dev)\n\n    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. \n-0.30998 -0.23548 -0.17844  0.00000 -0.03646 30.97281 \n\n\nBinning the nSD( % diff. deviance) helps to identify a threshold.\n\n\n\n\n\n\n\n\n\nSince we’re still establishing the method we need to check the genes against layer-specific effects.\n\n4.2.1.0.1 to do\nJACQUI YOU NEED TO SPLIT THIS PLOT IN HALF AND THEN PUT IT SIDE BY SIDE\n\n\n\n\n\n\n\n\n\nSatisfied with a threshold of 5 standard deviations for delta deviance\n\nbrain.df$dev_outlier = brain.df$nSD_dev&gt;=5\n\n\n\n\n4.2.2 SD cutoff: rank\n\nmean2 = mean(brain.df$r.diff)\nsd2 = sd(brain.df$r.diff)\nbrain.df$nSD_rank = (brain.df$r.diff-mean1)/sd2\nsummary(brain.df$nSD_rank)\n\n     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. \n-0.907385 -0.428725 -0.239781 -0.000451  0.037338 11.512571 \n\n\nSOME TEXT IS NEEDED HERE TO BREAK THINGS UP\n\n\n\n\n\n\n\n\n\n\nfilter(brain.df, between(nSD_rank,5,7)) %&gt;% arrange(desc(nSD_rank)) %&gt;%\n  select(gene_name, r.diff, nSD_rank)\n\n   gene_name r.diff nSD_rank\n1       XIST    547 6.889727\n2 AL627171.2    545 6.864535\n3   C11orf96    536 6.751168\n4      NEAT1    517 6.511838\n5     CLDN11    463 5.831638\n6       MT1M    447 5.630097\n7      HSPB1    442 5.567115\n8      PLPP3    407 5.126245\n\n\n\n4.2.2.0.1 to do\nJACQUI, SPLIT THIS ONE IN TWO (&gt;=5, &gt;=6) AND PUT SIDE BY SIDE\n\n\n\n\n\n\n\n\n\nCldn11 stands out as a possible marker for WM that may not be truly biased by subject but actually reflect varying tissue composition.\nCheck spatial expression.\n\n\n\n\n\n\n\n\n\nCLDN11 has nSD(rank)&lt;6 so we decided to check another gene with nSD(rank)&lt;6 to see if it was worth including these genes.\n\n\n\n\n\n\n\n\n\nWe observed no clear subject bias for either CLDN11 or PLPP3 so we settled on a threshold of 6 standard deviations for delta rank.\n\nbrain.df$rank_outlier = brain.df$nSD_rank&gt;=6",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>MBv: batch = subject</span>"
+    ]
+  },
+  {
+    "objectID": "mbv_subject.html#final-check-all-biased-genes",
+    "href": "mbv_subject.html#final-check-all-biased-genes",
+    "title": "4  MBv: batch = subject",
+    "section": "4.3 Final check all biased genes",
+    "text": "4.3 Final check all biased genes\n\nbiased.genes = filter(brain.df, dev_outlier==T | rank_outlier==T)$gene\nnames(biased.genes) = rowData(spe)[biased.genes,\"gene_name\"]\n\n\n\n\n\n\n\n\n\n\nCheck SPP1\n\n\n\n\n\n\n\n\n\nSPP1 is the perfect example of a gene we want to exclude because it is associated with spatial domains for some subjects/samples but is definitively errant in Br8092, inverse expression pattern in Br5993, and overall increased in Br5902.",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>MBv: batch = subject</span>"
+    ]
+  },
+  {
+    "objectID": "mbv_subject.html#cluster-results",
+    "href": "mbv_subject.html#cluster-results",
+    "title": "4  MBv: batch = subject",
+    "section": "4.4 Cluster results",
+    "text": "4.4 Cluster results\n\n\n\n\n\n\n\n\n\nThe exclusion of an additional 3 genes that would have occurred with the nSD(rank)&gt;=5 threshold had a surprisingly large impact on cluster results (losing the L5 and L6 distinction in favor for a small, noisy cluster most closely linked with L1).",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>MBv: batch = subject</span>"
+    ]
+  }
+]
