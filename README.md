@@ -1,4 +1,4 @@
 # About
-This is an overview of the feature QC method to detect features that are strongly biased based on a technical batch variable.
+This is an overview of the feature QC method to detect features that are strongly biased based on a technical batch variable.<br>
 Walkthrough with limited code located [here](https://jac-thom.github.io/findBiasedFeatures/).
 Comprehensive tutorial found in quarto markdown files.
