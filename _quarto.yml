@@ -14,4 +14,4 @@ book:
 
 format:
   html:
-    theme: cosmo
+    theme: default

@@ -1,8 +1,9 @@
 ---
-title: "Biased Feature Identification"
+title: "Background"
 format: 
   html:
     toc: true
+    link-external-newwindow: true
 echo: false
 editor: visual
 ---
@@ -14,24 +15,36 @@ library(dplyr)
 library(ggplot2)
 library(ggspavis)
 library(gridExtra)
-source("code/helper_functions.r") #need legend functions
+source("code/helper_functions.r")
 ```
 
 ```{r load spe}
 load("processed-data/spe_norm.Rdata")
 ```
 
-## Background
+# Background
 
-While analyzing a 10X Visium spatially resolved transcriptomics (SRT) dataset, we encountered a need for feature-based QC that could help optimize dimension reduction and/or clustering output.
+## The importance of feature selection
 
-Spatially-sensitive feature selection methods specifically designed for SRT often out-perform tried-and-true feature selection methods developed for bulk or single-cell RNAseq. However, these approaches do not permit the consideration of user-defined batch effects that may be introducing technical noise and occluding or distorting biological variation.
+A crucial step in single cell and single nucleus RNAseq analysis pipelines is the use of clustering algorithms generate groups of cells/nuclei with similar gene expression patterns. These clusters are often necessary to classify observations (cells/nuclei) based on cell state (cell type, developmental stage, etc.) to unleash the potential of the single cell/ nucleus approach.
+
+Clusters are generated based on patterns of expression of a subset of features, and the selection of these features is highly influential to the downstream results. When selecting features for dimension reduction and clustering, genes from the mitochondrial genome, known sex-linked genes, or cell cycle genes (depending on the dataset) are often removed from consideration. These “biological quality controls” can help produce clusters representing desired cell state by removing expression patterns linked to donor sex or cell size.
+
+Since canonical cell state marker genes will be highly expressed in one subset of observations and lowly expressed or absent in all others, common feature selection methods identify genes with highly variable expression within the dataset. Such methods often rely on modeling the mean-variance relationship and allow for the consideration of potential batch effects in these models. Batch consideration enables data-driven exclusion of features that capture technical noise or biological differences not relevant to the classification of cell state.
+
+## Feature selection in spatial transcriptomics
+
+In spatially resolved transcriptomics (SRT), the individual observations are not single cells or single nuclei, but rather single points in 2D space (on a tissue section). These x- and y-coordinates are preserved through sequencing, such that the processed transcriptomic data can reconstruct gene expression patterns that vary across different regions of tissue present in the same section. The goal of clustering in SRT datasets is often to use gene expression patterns to identify known spatial domains (e.g., different cortical layers of the brain).
+
+The extra spatial dimension (x/y coordinates) in SRT can be capitalized upon to identify features that have variable expression not only between observations but between different regions of the tissue section (spatially variable genes or SVGs). SVG selection methods often out-perform classic single cell or nuclei methods in generating features that recapitulate known spatial domains.
+
+However, SVG selection methods do not permit for the consideration of user-defined batch effects that may introduce technical noise or other sources of variation that may prevent or distort spatial domains.
 
 ## The problem
 
-We used nnSVG to select 2098 spatially variable genes (SVGs) on which to perform clustering with the goal of identifying clusters that strongly corresponded to the laminar domains in the DLPFC.
+While analyzing a 10X Visium SRT dataset from the human DLPFC, we recognized the need to evaluate our SVGs for the potential influence of batch effects in order to optimize spatial domain clustering
 
-Using K=7 we observed that L5 and L6 were merged and that increasing the number of clusters (K=8) did not generate distinct clusters for L5 and L6.
+We used [nnSVG](https://www.nature.com/articles/s41467-023-39748-z) to select 2098 statistically significant SVGs and then used [PRECAST](https://www.nature.com/articles/s41467-023-35947-w) to identify clusters that hopefully strongly corresponded to the cortical layers in the DLPFC. Using K=7 or K=8, we were unable to distinguish L5 from L6 with this set of features. We also identified a cluster of observations that appeared to be driven by low UMI count rather than expression of SVGs.
 
 ```{r spe list}
 spe_list = unique(spe$sample_id)
@@ -48,54 +61,50 @@ cols_7_other2 = c(cols_cluster[4],"plum",cols_cluster[c(2,1)],"#65ae0f",cols_clu
 cols_8 = c(cols_cluster[c(4,3,2)],"plum",cols_cluster[1],"#65ae0f",cols_cluster[7],"grey40")
 ```
 
-K=7
-
 ```{r k7 plot}
-#| warning: false
+#| output: false
 c1 <- lapply(seq_along(spe_list), function(x) {
-  plotSpots(spe_list[[x]], annotate="clust_k7_svg.raw_layers", point_size=.3)+
+  plotSpots(spe_list[[x]], annotate="clust_k7_svg.raw_layers", point_size=.1)+
     scale_color_manual(values=cols_7_other)+
     labs(title=names(spe_list)[[x]])+
-    theme(legend.position="none")
+    theme(legend.position="none", plot.margin=unit(c(0,0,0,0), units="cm"))
 })
-g1 = do.call(grid.arrange, c(c1[c(24,19,1,10)], ncol=4, newpage=F))
 ```
+
+*Figure 1. PRECAST clusters: 2098 input features (SVGs), K=7*
 
 ```{r view k7 plot}
-#| fig-height: 4
+#| fig-height: 2
 #| fig-width: 7
-lay.mat = matrix(c(1,1,1,1,2), nrow=1)
-grid.arrange(g1, cols_7o_legend(), layout_matrix=lay.mat, top="PRECAST clusters: 2098 input features (SVGs), K=7")
+#lay.mat = matrix(c(1,1,1,1,2), nrow=1)
+grid.arrange(c1[[24]],c1[[19]],c1[[1]],c1[[10]], cols_7o_legend(), ncol=5)
 ```
-
-K=8
 
 ```{r k8 plot}
-#| warning: false
+#| output: false
 c2 <- lapply(seq_along(spe_list), function(x) {
-  plotSpots(spe_list[[x]], annotate="clust_k8_svg.raw_layers", point_size=.3)+
+  plotSpots(spe_list[[x]], annotate="clust_k8_svg.raw_layers", point_size=.1)+
     scale_color_manual(values=cols_8)+
     labs(title=names(spe_list)[[x]])+
-    theme(legend.position="none")
+    theme(legend.position="none", plot.margin=unit(c(0,0,0,0), units="cm"))
 })
-g2 = do.call(grid.arrange, c(c2[c(24,19,1,10)], ncol=4, newpage=F))
 ```
+
+*Figure 2. PRECAST clusters: 2098 input features (SVGs), K=8*
 
 ```{r view k8 plot}
-#| fig-height: 4
+#| fig-height: 2
 #| fig-width: 7
-grid.arrange(g2, cols_8_legend(), layout_matrix=lay.mat, top="PRECAST clusters: 2098 input features (SVGs), K=8")
+grid.arrange(c2[[24]],c2[[19]],c2[[1]],c2[[10]], cols_8_legend(), 
+             ncol=5)
 ```
 
-DLPFC layer markers pulled from a recent publication indicated that there was no lack of L5 or L6 markers in our spatially variable genes (SVGs).
+The lack of distinction between L5 and L6 did not appear to be due under-representation of known gene markers for these cortical layers in the SVG set. (DLPFC layer markers pulled from [Huuki-Meyers et. al, 2024](https://www.science.org/doi/abs/10.1126/science.adh1938) Table S8.)
 
 ```{r map layer markers}
 svg.df = read.csv("processed-data/svg_df.csv")
 
-lm.df = read.csv("processed-data/EXT_TableS8_sig_genes_FDR5perc_enrichment.csv") %>%
- filter(spatial_domain_resolution=="Sp09", fdr<.05, stat>0) %>%
-  mutate(domain_simple=factor(test, levels=paste0("Sp09D0",c(1,2,3,5,8,4,7,6,9)),
-                              labels=c("L1","L1","L2","L3","L4","L5","L6","WM","WM")))
+lm.df = read.csv("processed-data/TableS8_filtered-layer-markers.csv")
 ```
 
 ```{r prep layer markers}
@@ -112,25 +121,26 @@ svg.lm.df = bind_rows(is.lm, not.lm) %>%
                               levels=c("L1","L2","L3","L4","L5","L6","WM","none")))
 ```
 
+*Figure 3. The SVG set comprises known marker genes for all DLPFC layers.*
+
 ```{r view layer markers}
-#| fig-height: 3
-#| fig-width: 5
+#| fig-height: 2.5
+#| fig-width: 4.5
 ggplot(svg.lm.df, aes(x=domain_simple, fill=domain_simple))+
   geom_bar(stat="count", width=.7, color="black")+
   scale_fill_manual(values=c(cols_7[1:3],"white",cols_7[4:7]))+
-  labs(x="spatial domain",y="# SVGs", 
-       title="SVGs that are also layer-specific markers", fill="",
-       subtitle="Layer markers pulled from Huuki-Meyers et al 2024 Table S8")+
+  labs(x="spatial domain",y="# SVGs", fill="")+
   theme_bw()
 ```
 
-Supplementing the SVG list with the most significant layer markers (top 100 lowest FDR for each layer) adds 327 features input for clustering. However, the number of L5 and L6 markers only mildly increased, indicating that the most striking L5 and L6 markers were already included in the SVG list.
+Nevertheless, we supplemented the SVG set with the most significant markers for each cortical layer (top 100 lowest FDR for each layer), adding 327 features to the input for clustering. We found that the number of L5 and L6 markers increased mildly, indicating that the most striking L5 and L6 markers were already included in the SVG list.
+
+*Figure 4. Adding the most significant marker genes marginally increases the SVG set.*
 
 ```{r supp layer markers}
-layer.markers.100 = read.csv("processed-data/EXT_TableS8_sig_genes_FDR5perc_enrichment.csv") %>%
-       filter(spatial_domain_resolution=="Sp09") %>% group_by(test) %>% slice_min(n=100, fdr)
+layer.markers.100 = read.csv("processed-data/TableS8_filtered-layer-markers.csv") %>%
+       group_by(test) %>% slice_min(n=100, fdr)
 lm100 = unique(layer.markers.100$ensembl)
-length(unique(setdiff(lm100, svg.lm.df$ensembl)))
 ```
 
 ```{r add supp LM}
@@ -140,58 +150,103 @@ svg.lm.supp.df <- bind_rows(mutate(svg.lm.df, source="SVG"),
 ```
 
 ```{r plot supp LM}
-#| fig-height: 3
-#| fig-width: 5
+#| fig-height: 2.5
+#| fig-width: 4.5
 ggplot(svg.lm.supp.df, aes(x=domain_simple, fill=domain_simple, 
                            lty=factor(source, levels=c("supp. LM","SVG"),
                                       labels=c("dashed","solid"))))+
   geom_bar(stat="count", width=.7, color="black", position="stack")+
   scale_linetype_identity()+
   scale_fill_manual(values=c(cols_7[1:3],"white",cols_7[4:7]))+
-  labs(x="spatial domain",y="# SVGs", lty="source",
-       title="SVGs that are also layer-specific markers", fill="",
-       subtitle="Layer markers pulled from Huuki-Meyers et al 2024 Table S8")+
+  labs(x="spatial domain",y="# SVGs", lty="source", fill="")+
   theme_bw()
 ```
 
-We found that supplementing the SVGs with additional layer markers did not improve spatial domain clustering with PRECAST.
+Supplementing the SVGs with additional layer markers did not improve spatial domain clustering with PRECAST at K=7 or K=8.
 
 ```{r supp k7 plot}
-#| warning: false
+#| output: false
 c3 <- lapply(seq_along(spe_list), function(x) {
-  plotSpots(spe_list[[x]], annotate="clust_k7_svg.supp_layers", point_size=.3)+
+  plotSpots(spe_list[[x]], annotate="clust_k7_svg.supp_layers", point_size=.1)+
     scale_color_manual(values=cols_7_other2)+
     labs(title=names(spe_list)[[x]])+
-    theme(legend.position="none")
+    theme(legend.position="none", plot.margin=unit(c(0,0,0,0), units="cm"))
 })
-g3 = do.call(grid.arrange, c(c3[c(24,19,1,10)], ncol=4, newpage=F))
 ```
 
+*Figure 5. PRECAST clusters: 2425 input features (SVGs + layer markers), K=7*
+
 ```{r view supp k7 plot}
-#| fig-height: 4
+#| fig-height: 2
 #| fig-width: 7
-grid.arrange(g3, cols_7o2_legend(), layout_matrix=lay.mat, top="PRECAST clusters: 2425 input features (SVGs + layer markers), K=7")
+grid.arrange(c3[[24]], c3[[19]], c3[[1]], c3[[10]], cols_7o2_legend(), ncol= 5)
 ```
 
 ```{r supp k8 plot}
-#| warning: false
+#| output: false
 c4 <- lapply(seq_along(spe_list), function(x) {
-  plotSpots(spe_list[[x]], annotate="clust_k8_svg.supp_layers", point_size=.3)+
+  plotSpots(spe_list[[x]], annotate="clust_k8_svg.supp_layers", point_size=.1)+
     scale_color_manual(values=cols_8)+
     labs(title=names(spe_list)[[x]])+
-    theme(legend.position="none")
+    theme(legend.position="none", plot.margin=unit(c(0,0,0,0), units="cm"))
 })
-g4 = do.call(grid.arrange, c(c4[c(24,19,1,10)], ncol=4, newpage=F))
 ```
+
+*Figure 6. PRECAST clusters: 2425 input features (SVGs + layer markers), K=8*
 
 ```{r view supp k8 plot}
-#| fig-height: 4
+#| fig-height: 2
 #| fig-width: 7
-grid.arrange(g4, cols_8_legend(), layout_matrix=lay.mat, top="PRECAST clusters: 2425 input features (SVGs + layer markers), K=8")
+grid.arrange(c4[[24]], c4[[19]], c4[[1]], c4[[10]], cols_8_legend(), ncol= 5) 
 ```
 
-We hypothesized that a small number of features within the SVG list were capturing technical variation in gene expression and that these "noisy" features could be occluding the identification of separate L5 and L6 clusters.
+```{r}
+### text excluded cause demonstration wasn't as strong as i remembered
+#The prior examples present the results of running PRECAST on all 24 samples in the dataset, with only 4 samples shown for simplicity. We observed that when PRECAST was run on different subsets of 8 samples, with the 4 example samples present in each subset, the resulting clusters varied for the samples present in both subsets.
+```
+
+```{r plot n8 group 1}
+#| eval: false
+c5 <- lapply(seq_along(spe_list), function(x) {
+  plotSpots(spe_list[[x]], annotate="clust_k7_svg.raw_n8.1_layers", point_size=.1)+
+    scale_color_manual(values=cols_7_other)+
+    labs(title=names(spe_list)[[x]])+
+    theme(legend.position="none", plot.margin=unit(c(0,0,0,0), units="cm"))
+})
+```
+
+```{r view n8 group 1}
+#| eval: false
+#| fig-height: 4
+#| fig-width: 7
+lay.mat = rbind(c(1,2,3,4,9),c(5,6,7,8,9))
+grid.arrange(c5[[24]], c5[[19]], c5[[1]], c5[[10]], 
+             c5[[2]], c5[[3]], c5[[4]], c5[[5]],
+             cols_7o_legend(), layout_matrix=lay.mat) 
+```
+
+```{r plot n8 group 2}
+#| eval: false
+c6 <- lapply(seq_along(spe_list), function(x) {
+  plotSpots(spe_list[[x]], annotate="clust_k7_svg.raw_n8.2_layers", point_size=.1)+
+    scale_color_manual(values=cols_7_other)+
+    labs(title=names(spe_list)[[x]])+
+    theme(legend.position="none", plot.margin=unit(c(0,0,0,0), units="cm"))
+})
+```
+
+```{r view n8 group 2}
+#| eval: false
+#| fig-height: 4
+#| fig-width: 7
+#lay.mat = rbind(c(1,2,3,4,9),c(5,6,7,8,9))
+grid.arrange(c6[[24]], c6[[19]], c6[[1]], c6[[10]], 
+             c6[[20]], c6[[21]], c6[[22]], c6[[23]],
+             cols_7o_legend(), layout_matrix=lay.mat) 
+```
+
+This led us to hypothesize that a small number of features within the SVG list were capturing technical variation in gene expression that that these “noisy” features were more prominent in some samples vs others.
 
 ## The goal
 
-To use a spatially insensitive feature selection method to characterize batch effects within our dataset, specifically identifying individual features that could be driving these effects. If such biased genes are present in the SVG list, removal of these features could improve spatial clustering.
+Our goal is to use feature selection methods designed for single cell/nuclei RNAseq that can account for batch effects to characterize SVGs. By examining the per-gene variance and rank with and without a batch effect, we aim to identify features that could be driving these effects. Removing these SVGs from the feature set may improve how the resulting clusters correspond to known DLPFC spatial domains.

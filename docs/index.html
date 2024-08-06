@@ -82,7 +82,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./index.html"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Biased Feature Identification</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./index.html"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Background</span></a></li></ol></nav>
         <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
@@ -110,7 +110,7 @@ ul.task-list li input[type="checkbox"] {
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./index.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Biased Feature Identification</span></span></a>
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Background</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -141,9 +141,13 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#background" id="toc-background" class="nav-link active" data-scroll-target="#background"><span class="header-section-number">0.1</span> Background</a></li>
-  <li><a href="#the-problem" id="toc-the-problem" class="nav-link" data-scroll-target="#the-problem"><span class="header-section-number">0.2</span> The problem</a></li>
-  <li><a href="#the-goal" id="toc-the-goal" class="nav-link" data-scroll-target="#the-goal"><span class="header-section-number">0.3</span> The goal</a></li>
+  <li><a href="#background" id="toc-background" class="nav-link active" data-scroll-target="#background"><span class="header-section-number">1</span> Background</a>
+  <ul class="collapse">
+  <li><a href="#the-importance-of-feature-selection" id="toc-the-importance-of-feature-selection" class="nav-link" data-scroll-target="#the-importance-of-feature-selection"><span class="header-section-number">1.1</span> The importance of feature selection</a></li>
+  <li><a href="#feature-selection-in-spatial-transcriptomics" id="toc-feature-selection-in-spatial-transcriptomics" class="nav-link" data-scroll-target="#feature-selection-in-spatial-transcriptomics"><span class="header-section-number">1.2</span> Feature selection in spatial transcriptomics</a></li>
+  <li><a href="#the-problem" id="toc-the-problem" class="nav-link" data-scroll-target="#the-problem"><span class="header-section-number">1.3</span> The problem</a></li>
+  <li><a href="#the-goal" id="toc-the-goal" class="nav-link" data-scroll-target="#the-goal"><span class="header-section-number">1.4</span> The goal</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -181,25 +185,25 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="background" class="level2" data-number="0.1">
-<h2 data-number="0.1" class="anchored" data-anchor-id="background"><span class="header-section-number">0.1</span> Background</h2>
-<p>While analyzing a 10X Visium spatially resolved transcriptomics (SRT) dataset, we encountered a need for feature-based QC that could help optimize dimension reduction and/or clustering output.</p>
-<p>Spatially-sensitive feature selection methods specifically designed for SRT often out-perform tried-and-true feature selection methods developed for bulk or single-cell RNAseq. However, these approaches do not permit the consideration of user-defined batch effects that may be introducing technical noise and occluding or distorting biological variation.</p>
+<section id="background" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Background</h1>
+<section id="the-importance-of-feature-selection" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="the-importance-of-feature-selection"><span class="header-section-number">1.1</span> The importance of feature selection</h2>
+<p>A crucial step in single cell and single nucleus RNAseq analysis pipelines is the use of clustering algorithms generate groups of cells/nuclei with similar gene expression patterns. These clusters are often necessary to classify observations (cells/nuclei) based on cell state (cell type, developmental stage, etc.) to unleash the potential of the single cell/ nucleus approach.</p>
+<p>Clusters are generated based on patterns of expression of a subset of features, and the selection of these features is highly influential to the downstream results. When selecting features for dimension reduction and clustering, genes from the mitochondrial genome, known sex-linked genes, or cell cycle genes (depending on the dataset) are often removed from consideration. These “biological quality controls” can help produce clusters representing desired cell state by removing expression patterns linked to donor sex or cell size.</p>
+<p>Since canonical cell state marker genes will be highly expressed in one subset of observations and lowly expressed or absent in all others, common feature selection methods identify genes with highly variable expression within the dataset. Such methods often rely on modeling the mean-variance relationship and allow for the consideration of potential batch effects in these models. Batch consideration enables data-driven exclusion of features that capture technical noise or biological differences not relevant to the classification of cell state.</p>
 </section>
-<section id="the-problem" class="level2" data-number="0.2">
-<h2 data-number="0.2" class="anchored" data-anchor-id="the-problem"><span class="header-section-number">0.2</span> The problem</h2>
-<p>We used nnSVG to select 2098 spatially variable genes (SVGs) on which to perform clustering with the goal of identifying clusters that strongly corresponded to the laminar domains in the DLPFC.</p>
-<p>Using K=7 we observed that L5 and L6 were merged and that increasing the number of clusters (K=8) did not generate distinct clusters for L5 and L6.</p>
-<p>K=7</p>
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="index_files/figure-html/k7 plot-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-</div>
+<section id="feature-selection-in-spatial-transcriptomics" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="feature-selection-in-spatial-transcriptomics"><span class="header-section-number">1.2</span> Feature selection in spatial transcriptomics</h2>
+<p>In spatially resolved transcriptomics (SRT), the individual observations are not single cells or single nuclei, but rather single points in 2D space (on a tissue section). These x- and y-coordinates are preserved through sequencing, such that the processed transcriptomic data can reconstruct gene expression patterns that vary across different regions of tissue present in the same section. The goal of clustering in SRT datasets is often to use gene expression patterns to identify known spatial domains (e.g., different cortical layers of the brain).</p>
+<p>The extra spatial dimension (x/y coordinates) in SRT can be capitalized upon to identify features that have variable expression not only between observations but between different regions of the tissue section (spatially variable genes or SVGs). SVG selection methods often out-perform classic single cell or nuclei methods in generating features that recapitulate known spatial domains.</p>
+<p>However, SVG selection methods do not permit for the consideration of user-defined batch effects that may introduce technical noise or other sources of variation that may prevent or distort spatial domains.</p>
+</section>
+<section id="the-problem" class="level2" data-number="1.3">
+<h2 data-number="1.3" class="anchored" data-anchor-id="the-problem"><span class="header-section-number">1.3</span> The problem</h2>
+<p>While analyzing a 10X Visium SRT dataset from the human DLPFC, we recognized the need to evaluate our SVGs for the potential influence of batch effects in order to optimize spatial domain clustering</p>
+<p>We used <a href="https://www.nature.com/articles/s41467-023-39748-z">nnSVG</a> to select 2098 statistically significant SVGs and then used <a href="https://www.nature.com/articles/s41467-023-35947-w">PRECAST</a> to identify clusters that hopefully strongly corresponded to the cortical layers in the DLPFC. Using K=7 or K=8, we were unable to distinguish L5 from L6 with this set of features. We also identified a cluster of observations that appeared to be driven by low UMI count rather than expression of SVGs.</p>
+<p><em>Figure 1. PRECAST clusters: 2098 input features (SVGs), K=7</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -209,16 +213,7 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </div>
-<p>K=8</p>
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="index_files/figure-html/k8 plot-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-</div>
+<p><em>Figure 2. PRECAST clusters: 2098 input features (SVGs), K=8</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -228,75 +223,57 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </div>
-<p>DLPFC layer markers pulled from a recent publication indicated that there was no lack of L5 or L6 markers in our spatially variable genes (SVGs).</p>
+<p>The lack of distinction between L5 and L6 did not appear to be due under-representation of known gene markers for these cortical layers in the SVG set. (DLPFC layer markers pulled from <a href="https://www.science.org/doi/abs/10.1126/science.adh1938">Huuki-Meyers et. al, 2024</a> Table S8.)</p>
+<p><em>Figure 3. The SVG set comprises known marker genes for all DLPFC layers.</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="index_files/figure-html/view layer markers-1.png" class="img-fluid figure-img" width="480"></p>
+<p><img src="index_files/figure-html/view layer markers-1.png" class="img-fluid figure-img" width="432"></p>
 </figure>
 </div>
 </div>
 </div>
-<p>Supplementing the SVG list with the most significant layer markers (top 100 lowest FDR for each layer) adds 327 features input for clustering. However, the number of L5 and L6 markers only mildly increased, indicating that the most striking L5 and L6 markers were already included in the SVG list.</p>
-<div class="cell">
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 327</code></pre>
-</div>
-</div>
+<p>Nevertheless, we supplemented the SVG set with the most significant markers for each cortical layer (top 100 lowest FDR for each layer), adding 327 features to the input for clustering. We found that the number of L5 and L6 markers increased mildly, indicating that the most striking L5 and L6 markers were already included in the SVG list.</p>
+<p><em>Figure 4. Adding the most significant marker genes marginally increases the SVG set.</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="index_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="480"></p>
+<p><img src="index_files/figure-html/plot supp LM-1.png" class="img-fluid figure-img" width="432"></p>
 </figure>
 </div>
 </div>
 </div>
-<p>We found that supplementing the SVGs with additional layer markers did not improve spatial domain clustering with PRECAST.</p>
+<p>Supplementing the SVGs with additional layer markers did not improve spatial domain clustering with PRECAST at K=7 or K=8.</p>
+<p><em>Figure 5. PRECAST clusters: 2425 input features (SVGs + layer markers), K=7</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="index_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="index_files/figure-html/view supp k7 plot-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
 </div>
+<p><em>Figure 6. PRECAST clusters: 2425 input features (SVGs + layer markers), K=8</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="index_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="index_files/figure-html/view supp k8 plot-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
 </div>
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="index_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-</div>
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="index_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-</div>
-<p>We hypothesized that a small number of features within the SVG list were capturing technical variation in gene expression and that these “noisy” features could be occluding the identification of separate L5 and L6 clusters.</p>
+<p>This led us to hypothesize that a small number of features within the SVG list were capturing technical variation in gene expression that that these “noisy” features were more prominent in some samples vs others.</p>
 </section>
-<section id="the-goal" class="level2" data-number="0.3">
-<h2 data-number="0.3" class="anchored" data-anchor-id="the-goal"><span class="header-section-number">0.3</span> The goal</h2>
-<p>To use a spatially insensitive feature selection method to characterize batch effects within our dataset, specifically identifying individual features that could be driving these effects. If such biased genes are present in the SVG list, removal of these features could improve spatial clustering.</p>
+<section id="the-goal" class="level2" data-number="1.4">
+<h2 data-number="1.4" class="anchored" data-anchor-id="the-goal"><span class="header-section-number">1.4</span> The goal</h2>
+<p>Our goal is to use feature selection methods designed for single cell/nuclei RNAseq that can account for batch effects to characterize SVGs. By examining the per-gene variance and rank with and without a batch effect, we aim to identify features that could be driving these effects. Removing these SVGs from the feature set may improve how the resulting clusters correspond to known DLPFC spatial domains.</p>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->
@@ -395,6 +372,11 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
         if (link.dataset.originalHref !== undefined) {
           link.href = link.dataset.originalHref;
         }
+          // target, if specified
+          link.setAttribute("target", "_blank");
+          if (link.getAttribute("rel") === null) {
+            link.setAttribute("rel", "noopener");
+          }
       }
     }
   function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {

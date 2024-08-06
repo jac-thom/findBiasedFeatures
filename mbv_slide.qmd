@@ -24,7 +24,7 @@ Having established the ability of the approach with a sample dataset, we now swi
 
 ## Intro to MBv project
 
-#### Goal of this analysis
+#### Goal of this analysis {.unnumbered}
 
 As established in the Intro\[LINK CHAPTER\], the goal of this analysis is to perform feature-based QC to remove features contributing to non-spatially meaningful biological variation from our list of spatially variable genes (SVGs).
 
@@ -32,7 +32,7 @@ As we showed in the spatialLIBD example, using `nnSVG` or `scry::devianceFeature
 
 Because of this, we decided to run `devianceFeatureSelection` on only the SVGs.
 
-#### Experimental design
+#### Experimental design {.unnumbered}
 
 24 human DLPFC samples, 1 sample per subject/ brain donor, 4 samples per slide (6 slides), 2 M 2 F each slide
 
@@ -42,12 +42,12 @@ We first investigated a slide effect.
 
 Based on
 
-```{r}
+```{r read binomial deviance results}
 #| echo: true
 slide.df = read.csv("processed-data/bindev_default-slide_svgs-only.csv")
 ```
 
-```{r}
+```{r plot default}
 sl1 = ggplot(slide.df, aes(x=rank_default, y=dev_default))+
   geom_point(size=.5)+
   scale_y_log10()+
@@ -55,7 +55,7 @@ sl1 = ggplot(slide.df, aes(x=rank_default, y=dev_default))+
   theme_bw()
 ```
 
-```{r}
+```{r plot batch}
 sl2 = ggplot(slide.df, aes(x=rank_slide, y=dev_slide))+
   geom_point(size=.5)+
   scale_y_log10()+
@@ -63,14 +63,14 @@ sl2 = ggplot(slide.df, aes(x=rank_slide, y=dev_slide))+
   theme_bw()
 ```
 
-```{r}
+```{r view slide models}
 #| fig-height: 3
 #| fig-width: 5
 grid.arrange(sl1, sl2, ncol=2, top="Binomial model performed on SVGs only (2098 genes)",
              bottom="dataset = MBv, n = 24 samples")
 ```
 
-```{r}
+```{r calc diff}
 #| echo: true
 #care about loss of deviance
 slide.df$d.diff = (slide.df[,"dev_default"]-slide.df[,"dev_slide"])/slide.df$dev_slide
@@ -78,7 +78,7 @@ slide.df$d.diff = (slide.df[,"dev_default"]-slide.df[,"dev_slide"])/slide.df$dev
 slide.df$r.diff = slide.df[,"rank_slide"]-slide.df[,"rank_default"]
 ```
 
-```{r}
+```{r plot dev diff}
 dev1 <- ggplot(slide.df, aes(x=dev_default, y=dev_slide, color=d.diff))+
   geom_point()+
   scale_x_log10()+scale_y_log10()+
@@ -89,7 +89,7 @@ dev1 <- ggplot(slide.df, aes(x=dev_default, y=dev_slide, color=d.diff))+
   theme_bw()
 ```
 
-```{r}
+```{r plot rank diff}
 rank1 <- ggplot(slide.df, aes(x=rank_default, y=rank_slide, color=r.diff))+
   geom_point()+scale_y_reverse()+
   geom_text_repel(data=filter(slide.df, r.diff>300), aes(label=gene_name))+
@@ -99,7 +99,7 @@ rank1 <- ggplot(slide.df, aes(x=rank_default, y=rank_slide, color=r.diff))+
   theme_bw()
 ```
 
-```{r}
+```{r view diff plots}
 #| fig-height: 4
 #| fig-width: 9
 grid.arrange(dev1, rank1, ncol=2, top="\u0394 deviance and \u0394 rank clearly separate outliers")
@@ -107,17 +107,17 @@ grid.arrange(dev1, rank1, ncol=2, top="\u0394 deviance and \u0394 rank clearly s
 
 ## Examine expression with dotplot
 
-```{r}
+```{r set cutoff}
 #| echo: true
 biased.genes = filter(slide.df, r.diff>300 | d.diff>.5)$gene
 names(biased.genes) = rowData(spe)[biased.genes,"gene_name"]
 ```
 
-```{r}
+```{r prep dotplot}
 plot.df <- dotplotDF(biased.genes, spe, norm.to.mbp=F)
 ```
 
-```{r}
+```{r plot dotplot}
 #| fig-height: 4
 #| fig-width: 7
 ggplot(plot.df %>% mutate(ylabel=factor(ylabel, 
@@ -125,7 +125,8 @@ ggplot(plot.df %>% mutate(ylabel=factor(ylabel,
        aes(x=xlabel, y=ylabel, size=n, color=scaled_avg))+
   geom_count()+
   scale_color_gradientn(colors=c("#4575b4","grey90","#d73027"), 
-                        limits=c(-1.6,4.5),
+                        limits=c(min(plot.df$scaled_avg)-.1,
+                                 max(plot.df$scaled_avg)+.1),
                         values=c(0,.33,1))+
   scale_size(limits=c(0,1))+
   facet_grid(cols=vars(slide), scales="free_x")+
@@ -142,13 +143,13 @@ For the remaining features (MTRNR2L1, SERPINA3, CHI3L1, C5orf63), although the a
 
 Looking at the unscaled logNormCounts values in the context of the spatial dimension, we can confirm slide-biased expression of MTRNR2L12 and AL627171.2.
 
-```{r}
+```{r spe list}
 spe_list = unique(spe$sample_id)
 names(spe_list) = lapply(spe_list, function(x) unique(colData(spe)[spe$sample_id==x,"brain"]))
 spe_list = lapply(spe_list, function(x) spe[,colData(spe)$sample_id==x])
 ```
 
-```{r}
+```{r mtrnr2l12 spatial}
 #| warning: false
 p1 <- lapply(seq_along(spe_list), function(x) {
   plotSpots(spe_list[[x]], annotate=biased.genes["MTRNR2L12"], 
@@ -160,14 +161,14 @@ p1 <- lapply(seq_along(spe_list), function(x) {
 })
 ```
 
-```{r}
+```{r plot mtrnr2l12}
 #| output: false
 g1 = do.call(grid.arrange, c(p1, ncol=4, top="MTRNR2L12", 
                                    bottom="MTRNR2L12 color scales are fixed/equal across all sub-plots",
                              newpage=F))
 ```
 
-```{r}
+```{r al6 spatial}
 #| warning: false
 p2 <- lapply(seq_along(spe_list), function(x) {
   plotSpots(spe_list[[x]], annotate=biased.genes["AL627171.2"], 
@@ -179,14 +180,14 @@ p2 <- lapply(seq_along(spe_list), function(x) {
 })
 ```
 
-```{r}
+```{r plot al6 spatial}
 #| output: false
 g2 = do.call(grid.arrange, c(p2, ncol=4, top="AL627171.2", 
                                    bottom="AL627171.2 color scales are fixed/equal across all sub-plots",
                              newpage=F))
 ```
 
-```{r}
+```{r view mtrnr2l12 and al6 spatial}
 #| fig-height: 7
 #| fig-width: 8
 grid.arrange(g1, g2, ncol=2)
@@ -194,7 +195,7 @@ grid.arrange(g1, g2, ncol=2)
 
 However, MTRNR2L8 clearly is most influenced by sample-specific variation rather than slide.
 
-```{r}
+```{r mtrnr2l8 spatial}
 #| warning: false
 p3 <- lapply(seq_along(spe_list), function(x) {
   plotSpots(spe_list[[x]], annotate=biased.genes["MTRNR2L8"], 
@@ -206,7 +207,7 @@ p3 <- lapply(seq_along(spe_list), function(x) {
 })
 ```
 
-```{r}
+```{r view mtrnr2l8}
 #| fig-height: 7
 #| fig-width: 4
 do.call(grid.arrange, c(p3, ncol=4, top="MTRNR2L8", 
@@ -223,8 +224,8 @@ However, the concern with examining sample-specific variation in gene expression
 
 Using the original raw SVG clustering outcome as a guide, we can see that Br5902 has a substantially higher proportion of WM spots than the other samples.
 
-```{r}
-wm.enrich = as.data.frame(colData(spe)[,c("brain","slide","clust_k7_svg.raw_layers")]) %>% 
+```{r tissue comp df}
+tissue.comp = as.data.frame(colData(spe)[,c("brain","slide","clust_k7_svg.raw_layers")]) %>% 
   mutate(clust_k7_svg.raw_layers=factor(clust_k7_svg.raw_layers, 
                                         levels=c("L1","L1 (2)","L2","L3","L5/6","WM"),
                                         labels=c("L1","L1","L2","L3","L5/6","WM"))) %>%
@@ -232,20 +233,21 @@ wm.enrich = as.data.frame(colData(spe)[,c("brain","slide","clust_k7_svg.raw_laye
   group_by(brain, slide) %>% mutate(total=sum(n), prop=n/total)
 ```
 
-```{r}
+```{r plot tissue comp}
 #| fig-height: 5
 #| fig-width: 10
-ggplot(filter(wm.enrich, clust_k7_svg.raw_layers!="bad"), 
+ggplot(filter(tissue.comp, clust_k7_svg.raw_layers!="bad"), 
        aes(x=slide, y=prop, label=brain, color=slide))+
   geom_text(size=3, position=position_jitter(height=.01, width=0))+
   scale_color_brewer(palette="Dark2")+
   facet_wrap(vars(clust_k7_svg.raw_layers), ncol=3)+
+  labs(title="Tissue composition of samples")+
   theme_bw()+theme(axis.text.x=element_text(size=8, angle=45, hjust=1))
 ```
 
 Notably, Br5902 appears to contribute to the identification of MTRNR2L1, SERPINA3, and CHI3L1 as subject/sample-biased (dotplot above).
 
-```{r}
+```{r wm enrich df}
 wm.genes = rownames(spe)[rowData(spe)$gene_name %in% c("MAL","MBP","OLIG1")]
 names(wm.genes) = rowData(spe)[wm.genes,"gene_name"]
 
@@ -264,7 +266,7 @@ spd.expr.df = cbind.data.frame(
                       names_to="gene_name", values_to="avg.logcounts")
 ```
 
-```{r}
+```{r plot wm enrich}
 spd1 = ggplot(spd.expr.df,
        aes(x=clust_k7_svg.raw_layers, y=avg.logcounts, fill=slide))+
   geom_boxplot(show.legend=F)+scale_fill_brewer(palette="Dark2")+
@@ -275,7 +277,7 @@ spd1 = ggplot(spd.expr.df,
   theme_bw()+theme(legend.text=element_text(size=8), legend.position="bottom")
 ```
 
-```{r}
+```{r check slide df}
 check.genes = biased.genes[c("MTRNR2L1","SERPINA3","CHI3L1")]
 
 check.genes.mtx <- cbind(sapply(check.genes, function(x) logcounts(spe)[x,]))
@@ -293,7 +295,7 @@ spd.expr.df2 = cbind.data.frame(
                       names_to="gene_name", values_to="avg.logcounts")
 ```
 
-```{r}
+```{r plot check slide}
 spd2 = ggplot(mutate(spd.expr.df2, 
                      gene_name=factor(gene_name, levels=c("MTRNR2L1","SERPINA3","CHI3L1"))),
        aes(x=clust_k7_svg.raw_layers, y=avg.logcounts, fill=slide))+
@@ -309,7 +311,7 @@ spd2 = ggplot(mutate(spd.expr.df2,
 
 We observed that unlike standard WM markers (left), the expression of MTRNR2L1, SERPINA3, and CHI3L1 expression are relatively equal across different spatial domains, both within the apparent outlier Br5902 and in other slides/samples (right plot).
 
-```{r}
+```{r view slide bias not wm}
 #| fig-height: 6
 #| fig-width: 7
 grid.arrange(addSmallLegend(spd1), addSmallLegend(spd2), ncol=2)
@@ -317,7 +319,7 @@ grid.arrange(addSmallLegend(spd1), addSmallLegend(spd2), ncol=2)
 
 To confirm this, we again refer to the unscaled logNormCounts values with the spatial expression plots (showing only a subset of samples for simplicity).
 
-```{r}
+```{r mtrnr2l1 spatial}
 #| warning: false
 p4 <- lapply(seq_along(spe_list), function(x) {
   plotSpots(spe_list[[x]], annotate=biased.genes["MTRNR2L1"], 
@@ -329,7 +331,7 @@ p4 <- lapply(seq_along(spe_list), function(x) {
 })
 ```
 
-```{r}
+```{r view mtrnr2l1}
 #| fig-height: 7
 #| fig-width: 4
 do.call(grid.arrange, c(p4,#[c(3,4,6,21)], 
@@ -337,7 +339,7 @@ do.call(grid.arrange, c(p4,#[c(3,4,6,21)],
                 bottom="color scales are fixed/equal across all sub-plots"))
 ```
 
-```{r}
+```{r serpina3 spatial}
 #| warning: false
 p5 <- lapply(seq_along(spe_list), function(x) {
   plotSpots(spe_list[[x]], annotate=biased.genes["SERPINA3"], 
@@ -349,7 +351,7 @@ p5 <- lapply(seq_along(spe_list), function(x) {
 })
 ```
 
-```{r}
+```{r view serpina3}
 #| fig-height: 7
 #| fig-width: 4
 do.call(grid.arrange, c(p5,#[c(3,4,6,21)], 
@@ -357,7 +359,7 @@ do.call(grid.arrange, c(p5,#[c(3,4,6,21)],
                 bottom="color scales are fixed/equal across all sub-plots"))
 ```
 
-```{r}
+```{r chi3l1 spatial}
 #| warning: false
 p6 <- lapply(seq_along(spe_list), function(x) {
   plotSpots(spe_list[[x]], annotate=biased.genes["CHI3L1"], 
@@ -369,7 +371,7 @@ p6 <- lapply(seq_along(spe_list), function(x) {
 })
 ```
 
-```{r}
+```{r view chi3l1}
 #| fig-height: 7
 #| fig-width: 4
 do.call(grid.arrange, c(p6,#[c(3,4,6,21)], 

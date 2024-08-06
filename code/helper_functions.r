@@ -1,125 +1,4 @@
-prepBias <- function(bindev.results, n.top=10000, sd.interval=5, ...) {
-        #description
-        ### bindev.results = dataframe with gene_id, gene_name, rank_default, rank_[x] where x in the batch effect 
-        ### n.top = maximum rank (default) of features to include when calculating SD
-        ### sd.interval = bin width for nSD(rank difference). value n determines upper open limit: [0,n), [n,2n), [2n,3n) ... 
-        
-        #error conditions 
-        if(!is.numeric(sd.interval)) {stop("`sd.interval` determinning bin width must be a single numeric value.")}
-        tmp = grep("rank_", colnames(bindev.results), value=TRUE)
-        if(length(tmp)!=2) {stop("Dataframe of binomial deviance results must have two rank columns.\nColumns must be named `rank_default` and `rank_[batch]`.\nRe-run binomial deviance or reformat results table.\n")}
-        if(length(intersect(tmp,"rank_default"))==0) {stop("One of the rank columns must be named `rank_default` in order to compare influence of rank with batch effect.\nReformat results table.\n")}
-        
-        #clarification message
-        batch = setdiff(tmp, "rank_default")
-        cat("Detected",batch,"as batch variable for bias detection\n")
-
-        #limit search for biased features to top 10k ranked genes
-	bindev.results = filter(bindev.results, rank_default<=n.top)
-        ## more complicated version to check for change in nSD dist with increasing rank
-#	seq1 = seq(0,n.top, by=1000)
-#        bindev.results$rank_default_bin = NA
-#        for (i in 2:length(seq1)) {
-#                bindev.results = mutate(bindev.results,
-#                        rank_default_bin=if_else(between(rank_default, seq1[i-1]+1, seq1[i]),
-#                                paste0("[",seq1[i-1]+1,",",seq1[i],"]"),
-#                                rank_default_bin))
-#        }
-#        bindev.results = filter(bindev.results, !is.na(rank_default_bin))
-
-        #determine SD based on all entries
-        bindev.results$r.diff = bindev.results[,batch]-bindev.results[,"rank_default"]
-        mean1 = mean(bindev.results$r.diff); sd1 = sd(bindev.results$r.diff)
-        cat("\npooled mean rank diff.=",mean1);cat("\npooled SD rank diff.=",sd1,"\n")
-        bindev.results$nSD = (bindev.results$r.diff-mean1)/sd1
-        bindev.results$nSD.bin = cut(abs(bindev.results$nSD), right=FALSE,
-                breaks=seq(0,max(bindev.results$nSD)+sd.interval, by=sd.interval), include.lowest=TRUE)
-        #if working with bindev results that were looped over slides (each slide analyzed separately), also calculate per-slide SD
-        if(length(grep("^slide$", colnames(bindev.results)))==1) {
-                #determine per slide SD
-                cat("\nper-slide mean and SD rank diff.\n")
-                group_by(bindev.results, slide) %>% summarise(avg.r.diff=mean(r.diff), sd.r.diff=sd(r.diff))
-                bindev.results = group_by(bindev.results, slide) %>% mutate(mean_slide=mean(r.diff), sd_slide=sd(r.diff), nSD_slide=(r.diff-mean_slide)/sd_slide) %>% ungroup()
-                bindev.results$nSD.bin_slide = cut(abs(bindev.results$nSD_slide), right=FALSE,
-                        breaks=seq(0,max(bindev.results$nSD_slide)+sd.interval, by=sd.interval), include.lowest=TRUE)
-        }
-        return(bindev.results)
-}
-
-findBiasedFeatures <- function(prepped.df, sd.safe=list(c("[0,5)"))) {
-        #description
-        ### prepped.df = dataframe produced by prepBias function
-        ### sd.safe = character string of binned SD values that cover non-biased genes; all other values of binned SD will be considered biased
-        ###### sd.safe is a list where the first element indicates the values to use for pooled SD approach and the second list element (if present) sets a different cutoff for the per-slide SD approach
-        
-        #error conditions 
-        if(!is.list(sd.safe) & !is.character(sd.safe)) {stop("`sd.safe` must be character string specifying values of `nSD.bin` to mark safe from biased feature list")}
-	if(length(sd.safe)>2) {stop("More than 2 list elements detected in `sd.safe`.\nReformat `sd.safe` so that the first list element is a character vector for pooled SD threshold and the second (optional) list element is a character vector for per-slide SD threshold.\n")} 
-	check.missing = setdiff(unlist(sd.safe), unique(prepped.df$nSD.bin))
-	if(length(check.missing)>0) {stop("One or more elements `sd.safe` are not valid `nSD.bin` values: ",check.missing,"\n")}
-        
-        tmp = grep("nSD\\.bin", colnames(prepped.df))
-        if(length(tmp)==0) {stop("Supplied dataframe does not contain `nSD.bin` values. Make sure prepBias has been run.")}
-        if(length(tmp)==1 & is.list(sd.safe) & length(sd.safe)==2) {
-                cat("Only",tmp,"detected in supplied dataframe, but `sd.safe` expects `nSD.bin` and `nSD.bin_slide` to both be present.\n")
-                stop("Either re-run prepBias to produce `nSD.bin_slide` or reformat `sd.safe` to be a single character vector.")
-        }
-
-        #formatting sd.safe and sd.safe messages
-        if(length(sd.safe)==1) {
-		if(length(tmp)==2) {
-                        cat("Only 1 SD threshold supplied but detected pooled and per-slide SD approaches in results.\nApplying same threshold to both.\n")
-                        cat("*** To identify biased features for pooled SD approach only, set second list element to NULL\n")
-			cat("Pooled SD calculations: SD bins greater than",sd.safe[[1]],"will be considered biased.\n")
-                        cat("Per-slide SD calculations: SD bins greater than",sd.safe[[1]],"will be considered biased.\n")
-			if(is.character(sd.safe)) {cat("Coercing `sd.safe` to list...\n"); sd.safe = list(sd.safe, sd.safe)}
-			else {sd.safe = list(sd.safe[[1]], sd.safe[[1]])}
-		} 
-		else {
-			cat("Applying SD bin threshold to pooled SD calculation only.\n")
-			cat("SD bins greater than",sd.safe[[1]],"will be considered biased.\n")
-                        if(is.character(sd.safe)) {
-				cat("Coercing `sd.safe` to list...\n")
-				sd.safe = list(sd.safe)
-			}
-                }
-        }
-        else {
-                if(is.list(sd.safe)) {
-			if(sum(sapply(sd.safe, is.null))==0) {
-				cat("Pooled SD calculations: SD bins greater than",sd.safe[[1]],"will be considered biased.\n")
-				cat("Per-slide SD calculations: SD bins greater than",sd.safe[[2]],"will be considered biased.\n")
-			}
-			else {
-				cat("NULL list element detected.\n")
-				sd.safe = sd.safe[[1]]
-				if(is.null(sd.safe)) {stop("NULL pooled SD threshold detected. Calculating per-slide bias only is not currently supported.")}
-			}
-		}
-                if(is.character(sd.safe)) {
-                        cat("Applying SD bin threshold to pooled SD calculation only.\n")
-                        cat("SD bins greater than",sd.safe,"will be considered biased.\n")
-                        cat("Coercing `sd.safe` to list...\n")
-                        sd.safe = list(sd.safe)
-                }
-        }
-
-        #label outliers
-        prepped.df = ungroup(prepped.df)
-        out.df = mutate(prepped.df, nSD.outlier=nSD.bin %in% setdiff(prepped.df$nSD.bin, sd.safe[[1]]))
-        if(length(sd.safe)==2) {
-                out.df = mutate(out.df, nSD.outlier_slide=nSD.bin_slide %in% setdiff(prepped.df$nSD.bin_slide, sd.safe[[2]]),
-                        outlier.group= factor(paste(nSD.outlier, nSD.outlier_slide),
-                                levels=c("FALSE FALSE","FALSE TRUE","TRUE FALSE","TRUE TRUE"),
-                                labels=c("none","per-slide only","pooled only","both")
-				)
-                        )
-        }
-        return(out.df)
-
-}
-
-dotplotDF <- function(plot.genes, spe, norm.to.mbp=TRUE, order.by.rank=FALSE, rank.df=NULL, ...) {
+dotplotDF <- function(plot.genes, spe, norm.to.mbp=TRUE, is_libd=FALSE, order.by.rank=FALSE, rank.df=NULL, ...) {
 	#description
 	### plot.genes: list of ensembl IDs of genes for which expression will be extracted from spe object
 	### spe: spatial experiment object with logcounts assay for plotting gene expression
@@ -142,6 +21,15 @@ dotplotDF <- function(plot.genes, spe, norm.to.mbp=TRUE, order.by.rank=FALSE, ra
 
 	#subset spe and build spe list
 	spe2 = spe[plot.genes,]
+	# change coldata names if LIBD
+	if(is_libd==TRUE) {
+		spe2$slide = spe2$subject
+		spe2$brain = spe2$sample_id
+		spe2$position = as.character(factor(paste(spe2$position, spe2$replicate), 
+                                 levels=c("0 1","0 2","300 1","300 2"),
+                                 labels=c("s1","s2","s3","s4")))
+	}
+	#make spe list
 	l4 = unique(spe2$sample_id)
 	names(l4) = lapply(l4, function(x) unique(colData(spe2)[spe2$sample_id==x,"brain"]))
 	l4 = lapply(l4, function(x) spe2[,colData(spe2)$sample_id==x])
@@ -207,48 +95,60 @@ dotplotDF <- function(plot.genes, spe, norm.to.mbp=TRUE, order.by.rank=FALSE, ra
 }
 
 cols_7_legend <- function() {
-	ggplot(cbind.data.frame("clus"=factor(c("L1","L2","L3","L5","L6","WM","bad"),
-				levels=c("L1","L2","L3","L5","L6","WM","bad")), 
+	ggplot(cbind.data.frame("clus"=factor(c("L1","L2","L3","L5","L6","WM","low UMI"),
+				levels=c("L1","L2","L3","L5","L6","WM","low UMI")), 
 			"colpal"=cols_7), 
-		aes(x="",y=11:5,fill=clus,label=clus))+
+		aes(x=rep(1,7), y=7:1, fill=clus, label=clus))+
 	geom_label(size=3, hjust=0)+
-	ylim(0,15)+
+	xlim(.98,1.05)+
+	ylim(.5,7.5)+
 	scale_fill_manual(values=cols_7)+
-	theme_void()+theme(legend.position="none", plot.margin=unit(c(1,1,0,0), units="cm"))
+	theme_void()+
+	theme(plot.margin=unit(c(0,0,0,0), units="cm"),
+		aspect.ratio=1, legend.position="none")
 }
 
 cols_7o_legend <- function() {
-	ggplot(cbind.data.frame("clus"=factor(c("L1","L1 (2)","L2","L3","L5/6","WM","bad"),
-				levels=c("L1","L1 (2)","L2","L3","L5/6","WM","bad")), 
+	ggplot(cbind.data.frame("clus"=factor(c("L1","L1 (2)","L2","L3","L5/6","WM","low UMI"),
+				levels=c("L1","L1 (2)","L2","L3","L5/6","WM","low UMI")), 
 			"colpal"=cols_7_other), 
-		aes(x="",y=11:5,fill=clus,label=clus))+
+		aes(x=rep(1,7), y=7:1, fill=clus, label=clus))+
 	geom_label(size=3, hjust=0)+
-	ylim(0,15)+
+	xlim(.98,1.05)+
+	ylim(.5,7.5)+
 	scale_fill_manual(values=cols_7_other)+
-	theme_void()+theme(legend.position="none", plot.margin=unit(c(1,1,0,0), units="cm"))
+	theme_void()+
+	theme(plot.margin=unit(c(0,0,0,0), units="cm"),
+		aspect.ratio=1, legend.position="none")
 }
 
 cols_7o2_legend <- function() {
 	ggplot(cbind.data.frame("clus"=factor(c("L1","L1/2/3","L2","L3",
-	                                        "L5/6","WM","bad"),
-				levels=c("L1","L1/2/3","L2","L3","L5/6","WM","bad")), 
+	                                        "L5/6","WM","low UMI"),
+				levels=c("L1","L1/2/3","L2","L3","L5/6","WM","low UMI")), 
 			"colpal"=cols_7_other2), 
-		aes(x="",y=11:5,fill=clus,label=clus))+
+		aes(x=rep(1,7), y=7:1, fill=clus, label=clus))+
 	geom_label(size=3, hjust=0)+
-	ylim(0,15)+
+	xlim(.98,1.05)+
+	ylim(.5,7.5)+
 	scale_fill_manual(values=cols_7_other2)+
-	theme_void()+theme(legend.position="none", plot.margin=unit(c(1,1,0,0), units="cm"))
+	theme_void()+
+	theme(plot.margin=unit(c(0,0,0,0), units="cm"),
+		aspect.ratio=1, legend.position="none")
 }
 
 cols_8_legend <- function() {
-	ggplot(cbind.data.frame("clus"=factor(c("L1","L1 (2)","L2","L2/3","L3","L5/6","WM","bad"),
-				levels=c("L1","L1 (2)","L2","L2/3","L3","L5/6","WM","bad")), 
+	ggplot(cbind.data.frame("clus"=factor(c("L1","L1 (2)","L2","L2/3","L3","L5/6","WM","low UMI"),
+				levels=c("L1","L1 (2)","L2","L2/3","L3","L5/6","WM","low UMI")), 
 			"colpal"=cols_8), 
-		aes(x="",y=seq(11.5,5.5, length.out=8),fill=clus,label=clus))+
+		aes(x=rep(1,8), y=8:1, fill=clus, label=clus))+
 	geom_label(size=3, hjust=0)+
-	ylim(0,15)+
+	xlim(.98,1.05)+
+	ylim(.5,8.5)+
 	scale_fill_manual(values=cols_8)+
-	theme_void()+theme(legend.position="none", plot.margin=unit(c(1,1,0,0), units="cm"))
+	theme_void()+
+	theme(plot.margin=unit(c(0,0,0,0), units="cm"),
+		aspect.ratio=1, legend.position="none")
 }
 
 addSmallLegend <- function(myPlot, pointSize = 1, textSize = 6, spaceLegend = 0.1) {

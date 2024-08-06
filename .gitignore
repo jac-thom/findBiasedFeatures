@@ -3,6 +3,7 @@
 *.rds
 .Rhistory
 archive/*
+~/*_files/
 
 /.quarto/
 /_book/
