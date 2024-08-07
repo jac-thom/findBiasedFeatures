@@ -173,10 +173,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#find-subject-biased-features" id="toc-find-subject-biased-features" class="nav-link active" data-scroll-target="#find-subject-biased-features"><span class="header-section-number">4.1</span> Find subject-biased features</a>
-  <ul class="collapse">
-  <li><a href="#check-for-wm-differences" id="toc-check-for-wm-differences" class="nav-link" data-scroll-target="#check-for-wm-differences"><span class="header-section-number">4.1.1</span> Check for WM differences</a></li>
-  </ul></li>
+  <li><a href="#find-subject-biased-features" id="toc-find-subject-biased-features" class="nav-link active" data-scroll-target="#find-subject-biased-features"><span class="header-section-number">4.1</span> Find subject-biased features</a></li>
   <li><a href="#improved-method-for-selecting-biased-genes" id="toc-improved-method-for-selecting-biased-genes" class="nav-link" data-scroll-target="#improved-method-for-selecting-biased-genes"><span class="header-section-number">4.2</span> Improved method for selecting biased genes</a>
   <ul class="collapse">
   <li><a href="#sd-cutoff-deviance" id="toc-sd-cutoff-deviance" class="nav-link" data-scroll-target="#sd-cutoff-deviance"><span class="header-section-number">4.2.1</span> SD cutoff: deviance</a></li>
@@ -208,12 +205,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
+<section id="find-subject-biased-features" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="find-subject-biased-features"><span class="header-section-number">4.1</span> Find subject-biased features</h2>
 <p>We performed the <code>scry::devianceFeatureSelection</code> with <code>batch= subject</code> on only the 2098 SVGs.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>brain.df <span class="ot">=</span> <span class="fu">read.csv</span>(<span class="st">"processed-data/bindev_default-brain_svgs-only.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<section id="find-subject-biased-features" class="level2" data-number="4.1">
-<h2 data-number="4.1" class="anchored" data-anchor-id="find-subject-biased-features"><span class="header-section-number">4.1</span> Find subject-biased features</h2>
 <p>To isolate the influence of <code>batch= subject</code> we calculated the relative change in deviance and the difference in rank.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># care about loss in deviance</span></span>
@@ -231,26 +228,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<section id="check-for-wm-differences" class="level3" data-number="4.1.1">
-<h3 data-number="4.1.1" class="anchored" data-anchor-id="check-for-wm-differences"><span class="header-section-number">4.1.1</span> Check for WM differences</h3>
-<p>Based on the fact that tissue composition differences were most obvious in the number of spots identified as WM based on our rough spatial clustering (Figure 3.6), we performed an initial check to see if the three top WM markers were blatantly influenced by the inclusion of <code>batch= subject</code> in the binomial deviance model.</p>
-<p><em>Figure 4.2 WM markers (red: MAP, MBP, OLIG1) do not appear to be preferentially changed by subject batch</em></p>
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="mbv_subject_files/figure-html/view wm markers-1.png" class="img-fluid figure-img" width="576"></p>
-</figure>
-</div>
-</div>
-</div>
-<p>The fact that these features are not the most altered by <code>batch= subject</code> gives us initial assurance that our feature-based QC approach is not identifying features that exhibit potential subject-bias due to the layer composition of the sample.</p>
-</section>
-</section>
-<section id="improved-method-for-selecting-biased-genes" class="level2" data-number="4.2">
-<h2 data-number="4.2" class="anchored" data-anchor-id="improved-method-for-selecting-biased-genes"><span class="header-section-number">4.2</span> Improved method for selecting biased genes</h2>
 <p>The influence of <code>batch= subject</code> is greater in magnitude than that of <code>batch= slide</code> as determined by the ranges of relative change in deviance and rank difference in each model.</p>
-<p><em>Figure 4.3 Inclusion of subject identity in the binomial deviance model is more impactful than slide</em></p>
+<p><em>Figure 4.2 Inclusion of subject identity in the binomial deviance model is more impactful than slide</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -260,7 +239,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<p>Further, these changes are more continuous (Figure 4.1), complicating the selection of a specific value for either metric to isolate potentially subject-biased genes. We decided to explore cutoffs based on the standard deviance (SD) of deviance and rank difference metrics to find a data-driven threshold.</p>
+<p>Also, these changes are more continuous (Figure 4.1), complicating the selection of a specific value for either metric to isolate potentially subject-biased genes.</p>
+</section>
+<section id="improved-method-for-selecting-biased-genes" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="improved-method-for-selecting-biased-genes"><span class="header-section-number">4.2</span> Improved method for selecting biased genes</h2>
+<p>We decided to explore cutoffs based on the standard deviance (SD) of deviance and rank difference metrics to find a data-driven thresholding approach.</p>
 <section id="sd-cutoff-deviance" class="level3" data-number="4.2.1">
 <h3 data-number="4.2.1" class="anchored" data-anchor-id="sd-cutoff-deviance"><span class="header-section-number">4.2.1</span> SD cutoff: deviance</h3>
 <p>The wide range of relative change in deviance resulting from the inclusion of <code>batch= subject</code> was evident in the fact that some features were as many as 30 SDs away from the mean.</p>
@@ -275,7 +258,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>Since our goal is to identify only the most strongly biased features that have the potential to impair spatial domain clustering, we explored thresholds based on the number of deviations (nSD) starting with nSD=5 with a step-size of 5.</p>
-<p><em>Figure 4.4 SVGs with relative change in deviance &gt;= 5 SDs from the mean appear to represent subject-biased genes</em></p>
+<p><em>Figure 4.3 SVGs with relative change in deviance &gt;= 5 SDs from the mean appear to represent subject-biased genes</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -285,9 +268,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<p>The nSD bins group the SVGs based on relative change in deviance such that a nSD cutoff&gt;=5 separates features with a continuous distribution of delta deviance from the outliers.</p>
-<p>Four of the SVGs with a nSD deviance&gt;=5 were already identified and confirmed as subject-biased: MTRNR2L8 (Figure 3.5), MTRNR2L1 (Figure 3.8), SERPINA3 (Figure 3.8), CHI3L1 (Figure 3.8). XIST was also identified as a subject-biased SVG. We will therefore spot-check the remaining 6 potentially subject-biased SVGs to verify that this threshold is appropriate.</p>
-<p>Of these remaining 6 SVGs, 3 were close to the cutoff of nSD&gt;=5 (SPP1, HSPB1, HSPA1B).</p>
+<p>The nSD bins split the SVGs such that a nSD cutoff&gt;=5 separated features with a continuous distribution of delta deviance from the outliers.</p>
+<p>Five of the SVGs with a nSD deviance&gt;=5 were already identified and confirmed as biased: MTRNR2L12 (Figure 3.4), MTRNR2L8 (Figure 3.5), MTRNR2L1 (Figure 3.8), SERPINA3 (Figure 3.8), CHI3L1 (Figure 3.8). XIST was also identified as a subject-biased SVG. We spot-checked the remaining 6 potentially subject-biased SVGs to verify that this threshold truly captured subject-driven noise.</p>
+<p>Of these remaining 5 SVGs, 3 were close to the cutoff of nSD&gt;=5 (SPP1, HSPB1, HSPA1B).</p>
 <div class="cell">
 <div class="cell-output cell-output-stdout">
 <pre><code>             gene gene_name    d.diff   nSD_dev nSD.bin_dev
@@ -295,23 +278,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 2 ENSG00000106211     HSPB1 0.6210194  5.311771      [5,10)
 3 ENSG00000204388    HSPA1B 0.6617434  5.681404      [5,10)
 4 ENSG00000132002    DNAJB1 0.9985636  8.738561      [5,10)
-5 ENSG00000269028 MTRNR2L12 1.0193604  8.927324      [5,10)
-6 ENSG00000204389    HSPA1A 1.3466700 11.898158     [10,15)</code></pre>
+5 ENSG00000204389    HSPA1A 1.3466700 11.898158     [10,15)</code></pre>
 </div>
 </div>
-<p>SPP1 was the only of the 6 potentially subject-biased SVGs identified with a relative change in deviance threshold nSD&gt;=5 that displayed enrichment in WM spots.</p>
-<p><em>Figure 4.5 Possible tissue composition effect in SPP1</em></p>
+<p>SPP1 was the only subject-biased SVG (identified by a relative change in deviance threshold nSD&gt;=5) that displayed elevated expression specifically in spots of a single spatial domain.</p>
+<p><em>Figure 4.4 SPP1 exhibits enrichment within a specific DLPFC spatial domain</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="mbv_subject_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="768"></p>
+<p><img src="mbv_subject_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
 </div>
-<p>Slides V13F27-338, V13F27-348, and V13Y10-023 appeared to contain samples/ subjects with outlier SPP1 expression, so we compared the spatial expression of SPP1 with that of MBP to examine if enrichment in WM spots was contributing the elevated expression in these subjects.</p>
-<p><em>Figure 4.6 SPP1 is definitively subject-biased and spatially variable</em></p>
+<p>Slides V13F27-338, V13F27-348, and V13Y10-023 appeared to contain samples/ subjects with outlier SPP1 expression. We compared the spatial expression of SPP1 with that of MBP to examine if enrichment in WM spots was contributing the elevated expression in subjects on these slides.</p>
+<p><em>Figure 4.5 SPP1 is definitively subject-biased and spatially variable</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -322,14 +304,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>We conclude that although SPP1 is correlated with MBP expression in some samples/ subjects, there are also strong subject-specific expression patterns unrelated to WM (Br5902, Br5993, Br8092). SPP1 is the perfect example of a gene we want to exclude because it is associated with spatial domains for some subjects/samples but is definitively errant in others. Although this may be of interest down the line when testing for differential expression between conditions, SPP1 seems poised to introduce noise to spatial clustering results if included in the input SVG list.</p>
-<p>At this point we are satisfied with a threshold of 5 standard deviations for delta deviance.</p>
+<p>At this point we were satisfied with a threshold of 5 standard deviations from the mean relative change in deviance.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>brain.df<span class="sc">$</span>dev_outlier <span class="ot">=</span> brain.df<span class="sc">$</span>nSD_dev<span class="sc">&gt;=</span><span class="dv">5</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="sd-cutoff-rank" class="level3" data-number="4.2.2">
 <h3 data-number="4.2.2" class="anchored" data-anchor-id="sd-cutoff-rank"><span class="header-section-number">4.2.2</span> SD cutoff: rank</h3>
-<p>The dispersion of rank difference introduced with the inclusion of <code>batch= subject</code> was evident less than that of relative change in deviance as evidenced by the maximum outlier feature only 11 SDs away from the mean rank difference.</p>
+<p>The dispersion of rank difference introduced with the inclusion of <code>batch= subject</code> was less than that of relative change in deviance (the furthest outlier feature was only 11 SDs away from the mean rank difference, compared to 30).</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>mean2 <span class="ot">=</span> <span class="fu">mean</span>(brain.df<span class="sc">$</span>r.diff)</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>sd2 <span class="ot">=</span> <span class="fu">sd</span>(brain.df<span class="sc">$</span>r.diff)</span>
@@ -340,8 +322,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 -0.907385 -0.428725 -0.239781 -0.000451  0.037338 11.512571 </code></pre>
 </div>
 </div>
-<p>Because of this reduced range we explored thresholds based on nSD(rank difference) steps of 3 or 5.</p>
-<p><em>Figure 4.7 Viable nSD(rank difference) cutoffs at 5 or 6</em></p>
+<p>Because of this reduced range we explored thresholds based on nSD of rank difference in steps of 3 or 5.</p>
+<p><em>Figure 4.6 Viable nSD(rank difference) cutoffs at 5 or 6</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -368,7 +350,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>Of the SVGs on the cusp of being potentially subject-biased as determined by rank difference, XIST, AL627171.2, and HSPB1 have already been evaluated.</p>
-<p><em>Figure 4.8 Potential subject-biased SVGs with nSD rank difference &lt;6 do not exhibit strong outliers</em></p>
+<p><em>Figure 4.7 Potential subject-biased SVGs with nSD rank difference &lt;6 do not exhibit strong outliers</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -379,17 +361,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p>We can see that unlike the potential subject-biased features in Figure 4.5 and the bottom of Figure 4.8, the SVGs with nSD rank difference &lt;6 do not exhibit strong single-subject outliers. Additionally, CLDN11 stands out as a possible marker for WM that may not be truly biased by subject but may actually reflect varying tissue composition.</p>
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="mbv_subject_files/figure-html/all mbp plot-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-</div>
-<p>Looking at a half of the samples confirms that CLDN11 is just spatially variable and correlated with MBP, not exhibiting any further subject bias.</p>
-<p><em>Figure 4.9 CLDN11 expression differences between subjects is driven by tissue composition</em></p>
+<p>Looking at a the unscaled logcounts expression confirms that CLDN11 is just spatially variable and correlated with MBP and does not not exhibit any further subject bias.</p>
+<p><em>Figure 4.8 CLDN11 expression differences between subjects is driven by tissue composition</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -399,8 +372,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<p>Checking a subset of samples of the two remaining SVGs with nSD rank difference &lt;6 establishes that PLPP3 does not exhibit any subject bias and the between-subject impact on MT1M expression is so-so.</p>
-<p><em>Figure 4.10 Weak or absent subject bias in two remaining SVGs with nSD rank difference &lt;6</em></p>
+<p>Checking the two remaining SVGs with nSD rank difference &lt;6 establishes that PLPP3 does not exhibit any subject bias and the between-subject impact on MT1M expression is so-so.</p>
+<p><em>Figure 4.9 Weak or absent subject bias in two remaining SVGs with nSD rank difference &lt;6</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -410,8 +383,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<p>Compare that to C11orf96 and NEAT1, which according to Figure 4.8 have subject outliers in slides V13F27-338 and V13F27-348. When viewing spatial expression plots for those two slides and also slide V13Y10-023 which doesn’t appear to have a subject outlier, we can see that C11orf96 expression is subject-biased, although NEAT1 expression appears to mostly correlate with WM.</p>
-<p><em>Figure 4.11 C11orf96 expression appears to be correlated with WM in some samples but not others and also exhibit subject bias</em></p>
+<p>Compare that to C11orf96 and NEAT1, which according to Figure 4.8 have subject outliers in slides V13F27-338 and V13F27-348. When viewing spatial expression plots for those two slides and also slide V13Y10-023 (which doesn’t appear to have a subject outlier), we can see that C11orf96 expression is subject-biased, although NEAT1 expression appears to mostly correlate with WM.</p>
+<p><em>Figure 4.10 C11orf96 expression appears to be correlated with WM in some samples but not others and also exhibit subject bias</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -429,7 +402,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="cluster-results" class="level2" data-number="4.3">
 <h2 data-number="4.3" class="anchored" data-anchor-id="cluster-results"><span class="header-section-number">4.3</span> Cluster results</h2>
-<p>Having determined threshold for the change in deviance and rank introduced with a <code>batch= subject</code> effect, we performed <code>PRECAST</code> clustering to identify spatial domains after removing all subject-biased SVGs (n=18) from the feature list. In exploring the influence of <code>batch= subject</code>, the threshold chosen included all features also identified as slide-biased with <code>batch= slide</code>.</p>
+<p>We isolate biased genes by the data-driven nSD thresholds for the change in deviance and rank introduced with a <code>batch= subject</code> effect. In exploring the influence of <code>batch= subject</code>, the threshold chosen included all features also identified as slide-biased with <code>batch= slide</code>.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>biased.genes <span class="ot">=</span> <span class="fu">filter</span>(brain.df, dev_outlier<span class="sc">==</span>T <span class="sc">|</span> rank_outlier<span class="sc">==</span>T)<span class="sc">$</span>gene</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(biased.genes) <span class="ot">=</span> <span class="fu">rowData</span>(spe)[biased.genes,<span class="st">"gene_name"</span>]</span>
@@ -443,12 +416,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="mbv_subject_files/figure-html/final plot-1.png" class="img-fluid figure-img" width="480"></p>
+<p><img src="mbv_subject_files/figure-html/final plot-1.png" class="img-fluid figure-img" width="384"></p>
 </figure>
 </div>
 </div>
 </div>
-<p>Our method proved successful and our goal was achieved. After removing the 18 biased SVGs we re-performed spatial domain clustering and found that the removal of the noisy features enabled the distinction of L5 and L6.</p>
+<p>Finally, we performed <code>PRECAST</code> clustering to identify spatial domains after removing all subject-biased SVGs (n=18) from the feature list.</p>
+<p>Our method proved successful and our goal was achieved; removing biased SVGs enabled the distinction of L5 and L6.</p>
 <p><em>Figure 4.12 PRECAST clusters: 2080 input features (SVGs minus 18 biased), K=7</em></p>
 <div class="cell">
 <div class="cell-output-display">

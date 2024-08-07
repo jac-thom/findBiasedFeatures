@@ -189,7 +189,7 @@ ul.task-list li input[type="checkbox"] {
 <h1 data-number="1"><span class="header-section-number">1</span> Background</h1>
 <section id="the-importance-of-feature-selection" class="level2" data-number="1.1">
 <h2 data-number="1.1" class="anchored" data-anchor-id="the-importance-of-feature-selection"><span class="header-section-number">1.1</span> The importance of feature selection</h2>
-<p>A crucial step in single cell and single nucleus RNAseq analysis pipelines is the use of clustering algorithms generate groups of cells/nuclei with similar gene expression patterns. These clusters are often necessary to classify observations (cells/nuclei) based on cell state (cell type, developmental stage, etc.) to unleash the potential of the single cell/ nucleus approach.</p>
+<p>A crucial step in single cell/nucleus RNAseq analysis is the implementation of clustering algorithms to generate groups of cells/nuclei with similar gene expression patterns. These clusters are often necessary to classify observations (cells/nuclei) based on cell state (cell type, developmental stage, etc.) to unleash the potential of the single cell/ nucleus approach.</p>
 <p>Clusters are generated based on patterns of expression of a subset of features, and the selection of these features is highly influential to the downstream results. When selecting features for dimension reduction and clustering, genes from the mitochondrial genome, known sex-linked genes, or cell cycle genes (depending on the dataset) are often removed from consideration. These “biological quality controls” can help produce clusters representing desired cell state by removing expression patterns linked to donor sex or cell size.</p>
 <p>Since canonical cell state marker genes will be highly expressed in one subset of observations and lowly expressed or absent in all others, common feature selection methods identify genes with highly variable expression within the dataset. Such methods often rely on modeling the mean-variance relationship and allow for the consideration of potential batch effects in these models. Batch consideration enables data-driven exclusion of features that capture technical noise or biological differences not relevant to the classification of cell state.</p>
 </section>
@@ -266,11 +266,11 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </div>
-<p>This led us to hypothesize that a small number of features within the SVG list were capturing technical variation in gene expression that that these “noisy” features were more prominent in some samples vs others.</p>
+<p>This led us to hypothesize that a small number of features within the SVG list were capturing technical variation in gene expression.</p>
 </section>
 <section id="the-goal" class="level2" data-number="1.4">
 <h2 data-number="1.4" class="anchored" data-anchor-id="the-goal"><span class="header-section-number">1.4</span> The goal</h2>
-<p>Our goal is to use feature selection methods designed for single cell/nuclei RNAseq that can account for batch effects to characterize SVGs. By examining the per-gene variance and rank with and without a batch effect, we aim to identify features that could be driving these effects. Removing these SVGs from the feature set may improve how the resulting clusters correspond to known DLPFC spatial domains.</p>
+<p>Our goal is to use feature selection methods that can account for batch effects to flag SVGs that may be strongly influenced by technical factors. By examining the per-gene variance/deviance with and without a batch effect, we aim to identify features that could be interfering with the generation of clusters that correspond to known DLPFC spatial domains.</p>
 
 
 </section>
