@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Find Biased Features - 2&nbsp; Exploration with spatialLIBD</title>
+<title>Find Biased Features - 5&nbsp; Things to look into further</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -64,8 +64,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./mbv_slide.html" rel="next">
-<link href="./index.html" rel="prev">
+<link href="./mbv_subject.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
@@ -115,7 +114,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./spatialLIBD.html"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Exploration with spatialLIBD</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./to_explore.html"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Things to look into further</span></a></li></ol></nav>
         <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
@@ -148,7 +147,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./spatialLIBD.html" class="sidebar-item-text sidebar-link active">
+  <a href="./spatialLIBD.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Exploration with spatialLIBD</span></span></a>
   </div>
 </li>
@@ -166,7 +165,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./to_explore.html" class="sidebar-item-text sidebar-link">
+  <a href="./to_explore.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Things to look into further</span></span></a>
   </div>
 </li>
@@ -180,18 +179,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#intro" id="toc-intro" class="nav-link active" data-scroll-target="#intro"><span class="header-section-number">2.1</span> Intro</a></li>
-  <li><a href="#feature-selection-comparison" id="toc-feature-selection-comparison" class="nav-link" data-scroll-target="#feature-selection-comparison"><span class="header-section-number">2.2</span> Feature selection comparison</a>
+  <li><a href="#modelgenevar-vs-poisson-distribution" id="toc-modelgenevar-vs-poisson-distribution" class="nav-link active" data-scroll-target="#modelgenevar-vs-poisson-distribution"><span class="header-section-number">5.1</span> modelGeneVar vs poisson distribution</a>
+  <ul>
+  <li><a href="#poisson-model-not-reproducible" id="toc-poisson-model-not-reproducible" class="nav-link" data-scroll-target="#poisson-model-not-reproducible"><span class="header-section-number">5.1.1</span> poisson model not reproducible</a></li>
+  <li><a href="#difference-due-to-batch-effect" id="toc-difference-due-to-batch-effect" class="nav-link" data-scroll-target="#difference-due-to-batch-effect"><span class="header-section-number">5.1.2</span> difference due to batch effect</a>
   <ul class="collapse">
-  <li><a href="#how-do-svgs-rank-in-each-model" id="toc-how-do-svgs-rank-in-each-model" class="nav-link" data-scroll-target="#how-do-svgs-rank-in-each-model"><span class="header-section-number">2.2.1</span> How do SVGs rank in each model?</a></li>
-  <li><a href="#are-top-ranked-genes-representative-of-layer-specific-differences-in-gene-expression" id="toc-are-top-ranked-genes-representative-of-layer-specific-differences-in-gene-expression" class="nav-link" data-scroll-target="#are-top-ranked-genes-representative-of-layer-specific-differences-in-gene-expression"><span class="header-section-number">2.2.2</span> Are top ranked genes representative of layer-specific differences in gene expression?</a></li>
+  <li><a href="#modelgenevar" id="toc-modelgenevar" class="nav-link" data-scroll-target="#modelgenevar">modelGeneVar</a></li>
+  <li><a href="#modelgenevarbypoisson" id="toc-modelgenevarbypoisson" class="nav-link" data-scroll-target="#modelgenevarbypoisson">modelGeneVarByPoisson</a></li>
   </ul></li>
-  <li><a href="#influence-of-batch-in-binomial-deviance-model-output" id="toc-influence-of-batch-in-binomial-deviance-model-output" class="nav-link" data-scroll-target="#influence-of-batch-in-binomial-deviance-model-output"><span class="header-section-number">2.3</span> Influence of batch in binomial deviance model output</a>
-  <ul class="collapse">
-  <li><a href="#highly-deviant-genes" id="toc-highly-deviant-genes" class="nav-link" data-scroll-target="#highly-deviant-genes"><span class="header-section-number">2.3.1</span> Highly deviant genes</a></li>
-  <li><a href="#spatially-variable-genes" id="toc-spatially-variable-genes" class="nav-link" data-scroll-target="#spatially-variable-genes"><span class="header-section-number">2.3.2</span> Spatially variable genes</a></li>
   </ul></li>
-  <li><a href="#spatial-expression-plots-to-confirm-bias" id="toc-spatial-expression-plots-to-confirm-bias" class="nav-link" data-scroll-target="#spatial-expression-plots-to-confirm-bias"><span class="header-section-number">2.4</span> Spatial expression plots to confirm bias</a></li>
+  <li><a href="#odd-sinusoidal-pattern-in-binomial-deviance-model" id="toc-odd-sinusoidal-pattern-in-binomial-deviance-model" class="nav-link" data-scroll-target="#odd-sinusoidal-pattern-in-binomial-deviance-model"><span class="header-section-number">5.2</span> Odd sinusoidal pattern in binomial deviance model?</a>
+  <ul>
+  <li><a href="#spatiallibd" id="toc-spatiallibd" class="nav-link" data-scroll-target="#spatiallibd"><span class="header-section-number">5.2.1</span> spatialLIBD</a></li>
+  <li><a href="#mbv-dataset" id="toc-mbv-dataset" class="nav-link" data-scroll-target="#mbv-dataset"><span class="header-section-number">5.2.2</span> MBv dataset</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -200,7 +201,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Exploration with spatialLIBD</span></h1>
+<h1 class="title"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Things to look into further</span></h1>
 </div>
 
 
@@ -217,222 +218,202 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<section id="intro" class="level2" data-number="2.1">
-<h2 data-number="2.1" class="anchored" data-anchor-id="intro"><span class="header-section-number">2.1</span> Intro</h2>
-<p>We chose to develop our method on an unrelated DLPFC dataset available through the <a href="https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-022-08601-w">spatialLIBD</a> package. This way we can explore how to identify batch-biased features while being blinded to how the approach will impact our dataset.</p>
-<p>First, we chose a feature selection method that can incorporate a batch variable into the model. Next, we compared the per-gene ranks and dispersion values when the model was run with and without a batch effect. Finally, we confirmed that the genes identified as biased did exhibit expression patterns consistent with non-biological technical noise.</p>
-<section id="spatiallibd-example-dataset" class="level4 unnumbered">
-<h4 class="unnumbered anchored" data-anchor-id="spatiallibd-example-dataset">spatialLIBD example dataset</h4>
-<p>The spatialLIBD dataset was collected from the same brain region as our data (DLPFC) and was also sequenced with 10X Visium. This dataset has 3 subjects and 4 samples from each subject. Because there was no slide metadata available, we investigated whether <code>batch = subject</code> influenced the top features.</p>
+<section id="modelgenevar-vs-poisson-distribution" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="modelgenevar-vs-poisson-distribution"><span class="header-section-number">5.1</span> modelGeneVar vs poisson distribution</h2>
+<section id="poisson-model-not-reproducible" class="level3" data-number="5.1.1">
+<h3 data-number="5.1.1" class="anchored" data-anchor-id="poisson-model-not-reproducible"><span class="header-section-number">5.1.1</span> poisson model not reproducible</h3>
+<p>We observed that even with the same seed, the <code>scran::modelGeneVarByPoisson</code> function does not return identical variance results, leading to changes in rank that can be impactful when looking at HVGs.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(spatialLIBD)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>spe <span class="ot">&lt;-</span> <span class="fu">fetch_data</span>(<span class="at">type =</span> <span class="st">"spe"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(spatialLIBD)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>spe <span class="ot">&lt;-</span> <span class="fu">fetch_data</span>(<span class="at">type =</span> <span class="st">"spe"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The <code>modelGeneVar</code> function and <code>scry::devianceFeatureSelection</code> function both produce identical results with different runs.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>mv <span class="ot">&lt;-</span> <span class="fu">modelGeneVar</span>(<span class="fu">logcounts</span>(spe))</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>mv1 <span class="ot">&lt;-</span> <span class="fu">modelGeneVar</span>(<span class="fu">logcounts</span>(spe))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>bd <span class="ot">&lt;-</span> <span class="fu">devianceFeatureSelection</span>(<span class="fu">counts</span>(spe), <span class="at">fam=</span><span class="st">"binomial"</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>bd1 <span class="ot">&lt;-</span> <span class="fu">devianceFeatureSelection</span>(<span class="fu">counts</span>(spe), <span class="at">fam=</span><span class="st">"binomial"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">identical</span>(mv[,<span class="st">"bio"</span>], mv1[,<span class="st">"bio"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>         subject
-sample_id Br5292 Br5595 Br8100
-   151507   4226      0      0
-   151508   4384      0      0
-   151509   4789      0      0
-   151510   4634      0      0
-   151669      0   3661      0
-   151670      0   3498      0
-   151671      0   4110      0
-   151672      0   4015      0
-   151673      0      0   3639
-   151674      0      0   3673
-   151675      0      0   3592
-   151676      0      0   3460</code></pre>
+<pre><code>[1] TRUE</code></pre>
 </div>
-</div>
-</section>
-</section>
-<section id="feature-selection-comparison" class="level2" data-number="2.2">
-<h2 data-number="2.2" class="anchored" data-anchor-id="feature-selection-comparison"><span class="header-section-number">2.2</span> Feature selection comparison</h2>
-<p>We examined two different models of feature selection. The first model is from <a href="https://www.nature.com/articles/nmeth.2645">scran</a> and utilizes per-gene variance to identify top features. This method, here referred to as the <strong>mean-variance model</strong>, is performed after normalization of the counts matrix. We opted to use the <code>modelGeneVarByPoisson</code> function which assumes that the mean-variance relationship trend due to technical noise follow a poisson distribution.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>mv <span class="ot">&lt;-</span> <span class="fu">modelGeneVarByPoisson</span>(<span class="fu">logcounts</span>(spe))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>The second approach from <a href="https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1861-6">scry</a> fits a model to the raw counts matrix and assumes that genes with no biologically meaningful expression pattern will fit a binomial distribution. The greater the per-gene deviance from this null model, the more likely the expression of said gene is biologically meaningful as a top feature. We refer to this method as the <strong>binomial deviance model</strong>.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>bd <span class="ot">&lt;-</span> <span class="fu">devianceFeatureSelection</span>(<span class="fu">counts</span>(spe), <span class="at">fam=</span><span class="st">"binomial"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<section id="how-do-svgs-rank-in-each-model" class="level3" data-number="2.2.1">
-<h3 data-number="2.2.1" class="anchored" data-anchor-id="how-do-svgs-rank-in-each-model"><span class="header-section-number">2.2.1</span> How do SVGs rank in each model?</h3>
-<p>Our goal is to determine whether SVGs exhibit biased expression according of different batch variables. Therefore, the ideal feature selection model would similarly identify SVGs as highly ranked features.</p>
-<p>We ran the <code>nnSVG</code> model on the <code>spatialLIBD</code> data to identify SVGs. We next examined the rank of these features in the mean-variance model and the binomial deviance model.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>libd.svgs <span class="ot">=</span> <span class="fu">read.csv</span>(<span class="st">"processed-data/libd-all_nnSVG_p-05-features-df.csv"</span>, </span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>                     <span class="at">row.names=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>We found that the mean-variance model ranked a considerable portion of the SVGs as some of the lowest features in the dataset. In contrast, all the SVGs were ranked highly with the binomial deviance model.</p>
-<p><em>Figure 2.1 Bionomial deviance model better corresponds to nnSVG results</em></p>
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="spatialLIBD_files/figure-html/view models-1.png" class="img-fluid figure-img" width="576"></p>
-</figure>
-</div>
-</div>
-</div>
-</section>
-<section id="are-top-ranked-genes-representative-of-layer-specific-differences-in-gene-expression" class="level3" data-number="2.2.2">
-<h3 data-number="2.2.2" class="anchored" data-anchor-id="are-top-ranked-genes-representative-of-layer-specific-differences-in-gene-expression"><span class="header-section-number">2.2.2</span> Are top ranked genes representative of layer-specific differences in gene expression?</h3>
-<p>A separate but related property of the ideal feature selection model would be to generate a list of top features that are consistent with known DLPFC layer markers and comprise markers of all layer domains. We used the recently published list of DLPFC layer markers from <a href="https://www%3E.science.org/doi/abs/10.1126/science.adh1938">Huuki-Meyers et. al, 2024</a> Table S8 to characterize the top 3000 features of the mean-variance and binomial deviance models.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>lm.df <span class="ot">=</span> <span class="fu">read.csv</span>(<span class="st">"processed-data/TableS8_filtered-layer-markers.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>These results further supported the selection of the binomial deviance model, as the 3000 most highly ranked features represented significant markers for all DLPFC cortical layers. In contrast, the 3000 most highly ranked features from the mean-variance model were overwhelmingly L1 and white matter (WM) markers.</p>
-<p><em>Figure 2.2 Binomial deviance model better corresponds to known DLPFC layer markers</em></p>
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="spatialLIBD_files/figure-html/view top genes as lm-1.png" class="img-fluid figure-img" width="576"></p>
-</figure>
-</div>
-</div>
-</div>
-</section>
-</section>
-<section id="influence-of-batch-in-binomial-deviance-model-output" class="level2" data-number="2.3">
-<h2 data-number="2.3" class="anchored" data-anchor-id="influence-of-batch-in-binomial-deviance-model-output"><span class="header-section-number">2.3</span> Influence of batch in binomial deviance model output</h2>
-<p>Having picked a feature selection method, next we compared the per-gene ranks and deviance values when the model was run with and without a batch effect. Because the <code>spatialLIBD</code> data has 4 samples per subject, we used <code>batch= subject</code>.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>bd.batch <span class="ot">&lt;-</span> <span class="fu">devianceFeatureSelection</span>(<span class="fu">counts</span>(spe), <span class="at">fam=</span><span class="st">"binomial"</span>, </span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">batch=</span><span class="fu">as.factor</span>(spe<span class="sc">$</span>subject))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>Including a subject-batch effect doesn’t dramatically change the rank of the SVGs.</p>
-<p><em>Figure 2.3 SVGs are consistently highly ranked in binomial deviance model with and without batch</em></p>
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="spatialLIBD_files/figure-html/view dev models svgs-1.png" class="img-fluid figure-img" width="576"></p>
-</figure>
-</div>
-</div>
-</div>
-<p>We see that &gt;90% of <code>spatialLIBD</code> SVGs are ranked in the top 3000 features by either binomial deviance model.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">quantile</span>(bd.df[libd.svgs<span class="sc">$</span>gene_id,<span class="st">"rank"</span>], <span class="at">probs=</span><span class="fu">seq</span>(<span class="dv">0</span>,<span class="dv">1</span>,.<span class="dv">1</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">identical</span>(bd, bd1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>    0%    10%    20%    30%    40%    50%    60%    70%    80%    90%   100% 
-   1.0  200.6  400.2  606.8  830.4 1060.0 1316.8 1601.2 1913.6 2256.8 4077.0 </code></pre>
+<pre><code>[1] TRUE</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">quantile</span>(bd.batch.df[libd.svgs<span class="sc">$</span>gene_id,<span class="st">"rank"</span>], <span class="at">probs=</span><span class="fu">seq</span>(<span class="dv">0</span>,<span class="dv">1</span>,.<span class="dv">1</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The <code>modelGeneVarByPoisson</code> function does not.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>mvp <span class="ot">&lt;-</span> <span class="fu">modelGeneVarByPoisson</span>(<span class="fu">logcounts</span>(spe))</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>mvp1 <span class="ot">&lt;-</span> <span class="fu">modelGeneVarByPoisson</span>(<span class="fu">logcounts</span>(spe))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">identical</span>(mvp[,<span class="st">"bio"</span>], mvp1[,<span class="st">"bio"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>    0%    10%    20%    30%    40%    50%    60%    70%    80%    90%   100% 
-   1.0  199.2  401.2  606.8  830.4 1060.0 1316.6 1603.2 1917.8 2271.4 5903.0 </code></pre>
+<pre><code>[1] FALSE</code></pre>
 </div>
 </div>
-<p>This suggests that <code>scry::devianceFeatureSelection</code> could be a good alternative to <code>nnSVG</code> feature selection if there is considerable technical variation in the experiment/ dataset. It can also be run much faster.</p>
-<section id="highly-deviant-genes" class="level3" data-number="2.3.1">
-<h3 data-number="2.3.1" class="anchored" data-anchor-id="highly-deviant-genes"><span class="header-section-number">2.3.1</span> Highly deviant genes</h3>
-<p>Now we can examine the influence of <code>batch= subject</code> on the per-gene deviance values and ranks. Since we propose that using a binomial deviance model to select top features is a possible alternative to <code>nnSVG</code> feature selection we will first examine the top features as ranked based on the binomial deviance model (rank&lt;=3000 in either model).</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>subject.df <span class="ot">&lt;-</span> <span class="fu">left_join</span>(bd.df, bd.batch.df,</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>                       <span class="at">by=</span><span class="fu">c</span>(<span class="st">"gene"</span>, <span class="st">"gene_name"</span>,<span class="st">"is_svg"</span>),</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>                       <span class="at">suffix=</span><span class="fu">c</span>(<span class="st">"_default"</span>,<span class="st">"_subject"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>Recall that the greater the per-gene deviance, the more likely the expression of said gene is biologically meaningful. Therefore, a decrease in deviance when including <code>batch= subject</code> indicates that subject identity accounted for variation in gene expression that was previously considered to be biologically meaningful. Not all magnitudes of change in deviance are noteworthy, so we examined the change in deviance relative to the final deviance value in the batch effect model.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>subject.df<span class="sc">$</span>d.diff <span class="ot">=</span> (subject.df<span class="sc">$</span>dev_default<span class="sc">-</span>subject.df<span class="sc">$</span>dev_subject)<span class="sc">/</span>subject.df<span class="sc">$</span>dev_subject</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>Since more lowly ranked features are considered more important, an increase in rank when including<code>batch= subject</code> indicates that the relative importance of the feature is diminished once subject identity is accounted for.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>subject.df<span class="sc">$</span>r.diff <span class="ot">=</span> subject.df<span class="sc">$</span>rank_subject<span class="sc">-</span>subject.df<span class="sc">$</span>rank_default</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p><em>Figure 2.4 Influence of batch on highly deviant genes (n= 3000)</em></p>
+<p><em>Figure S1. Minor changes in variance produced by different poisson model runs impact rank</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="spatialLIBD_files/figure-html/view diff plots-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-</div>
-<p>Our approach suggests that when batch is included in the binomial deviance model, some highly ranked features still show signs of having reductions in deviance that was previously attributed to biological variation. One of these features is RPS4Y1, which is located on the Y chromosome and therefore ought to exhibit substantial between-subject differences based on sex.</p>
-</section>
-<section id="spatially-variable-genes" class="level3" data-number="2.3.2">
-<h3 data-number="2.3.2" class="anchored" data-anchor-id="spatially-variable-genes"><span class="header-section-number">2.3.2</span> Spatially variable genes</h3>
-<p>Now we will examine whether the change in deviance and the change in rank also highlight SVGs that are potentially subject-biased.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>top.svg.df <span class="ot">=</span> <span class="fu">filter</span>(subject.df, gene <span class="sc">%in%</span> libd.svgs<span class="sc">$</span>gene_id)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>Our approach indicates that the two genes with the strongest potential to exhibit subject-biased expression patterns in a way that confounds biological variation are also SVGs (MTRNR2L1, MTRNR2L8). In addition we identify Xist as subject-biased. Xist is a lncRNA that is robustly expressed in females due to its importance for X inactivation. The identification of Xist as a subject-biased gene indicates that our approach works as intended (picking up features with non-spatially relevant sources of variation).</p>
-<p><em>Figure 2.5 Influence of batch on SVGs (n= 1967)</em></p>
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="spatialLIBD_files/figure-html/view svgs diff-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="to_explore_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
 </div>
 </section>
+<section id="difference-due-to-batch-effect" class="level3" data-number="5.1.2">
+<h3 data-number="5.1.2" class="anchored" data-anchor-id="difference-due-to-batch-effect"><span class="header-section-number">5.1.2</span> difference due to batch effect</h3>
+<section id="modelgenevar" class="level4 unnumbered">
+<h4 class="unnumbered anchored" data-anchor-id="modelgenevar">modelGeneVar</h4>
+<p>Using the <code>modelGeneVar</code> function, the difference in gene rank due to <code>batch= subject</code> does not identify possibly subject-biased genes.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>mv.batch <span class="ot">&lt;-</span> <span class="fu">modelGeneVar</span>(<span class="fu">logcounts</span>(spe), <span class="at">block=</span><span class="fu">as.factor</span>(spe<span class="sc">$</span>subject))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><em>Figure S2. Comparison of feature rank with and without subject batch</em></p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="to_explore_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" width="576"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Things to note: weird ties a 20k, massive spread (compare to Figure S8), two groups ranked highly with one model and not another.</p>
+<p>We looked at both group 1 and group 2 genes to see if they exhibit true subject-biased expression. Plots showing average expression of each sample across spatial domain show that many of these features exhibit graded expression across cortical layers suggesting that they are actually spatially variable. There is also a notable absence of outliers (which are seen with true subject-biased expression).</p>
+<p><em>Figure S3. Features flagged by the mean-variance model are not subject-biassed</em></p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="to_explore_files/figure-html/unnamed-chunk-25-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Other than RPS26 (explored in Figure 2.9), RAPGEF5 exhibited the greatest difference in expression between subjects. However, looking at the spatial expression of RAPGEF5 indicates no subject bias.</p>
+<p><em>Figure S4. RAPGEF5 is not biased by subject but correlates with WM</em></p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="to_explore_files/figure-html/unnamed-chunk-27-1.png" class="img-fluid figure-img" width="1344"></p>
+</figure>
+</div>
+</div>
+</div>
 </section>
-<section id="spatial-expression-plots-to-confirm-bias" class="level2" data-number="2.4">
-<h2 data-number="2.4" class="anchored" data-anchor-id="spatial-expression-plots-to-confirm-bias"><span class="header-section-number">2.4</span> Spatial expression plots to confirm bias</h2>
-<p>Our approach suggests that even when batch correction is performed, there can still be some highly ranked genes that exhibit the potential for strong subject-bias. Further, three of these potentially biased features are SVGs.</p>
-<p>Plotting the rank difference and relative change in deviance together shows that the mitochondrial genome (grey) has a distinct pattern on no change in rank and many chrM genes have relatively high change in deviance compared to non-biased genes. If we remove the chrM genes (as is often done in feature selection), this leaves two additional features that are outliers from the rest of the top features or SVGs (RPS26 and MT3).</p>
-<p><em>Figure 2.6 Mitochondrial genome and potential additional biased genes</em></p>
+<section id="modelgenevarbypoisson" class="level4 unnumbered">
+<h4 class="unnumbered anchored" data-anchor-id="modelgenevarbypoisson">modelGeneVarByPoisson</h4>
+<p>Using the <code>modelGeneVarByPoisson</code> function does identify some rank differences due to <code>batch= subject</code> but are inconsistent (reproducibility). Using the poisson assumptions for technical variation reduced the number of features that were highly ranked with <code>batch= NULL</code> and highly ranked with <code>batch= subject</code> (compared to <code>modelGeneVar</code>).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>mvp.batch <span class="ot">&lt;-</span> <span class="fu">modelGeneVarByPoisson</span>(<span class="fu">logcounts</span>(spe), <span class="at">block=</span><span class="fu">as.factor</span>(spe<span class="sc">$</span>subject))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><em>Figure S5. Feature ranks based on mean-variance modeling are not consistent when batch effects are added</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="spatialLIBD_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="to_explore_files/figure-html/unnamed-chunk-32-1.png" class="img-fluid figure-img" width="720"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The small changes in variance between identical models can lead to changes in top ranked features and thus alter which genes are available to examine for subject-bias.</p>
+<p><em>Figure S6. Top 3k features: Introduction of batch to poisson mean-variance model and inconsistencies between runs</em></p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="to_explore_files/figure-html/unnamed-chunk-36-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="spatialLIBD_files/figure-html/unnamed-chunk-4-2.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="to_explore_files/figure-html/unnamed-chunk-36-2.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
 </div>
-<p>To confirm a strong influence of subject/ brain donor for potentially biased genes we looked at the spatial expression plots.</p>
-<p>We first examine XIST (spatially variable) and RPS4Y1 (highly deviant), given that both genes are located on sex chromosomes and therefore ought to exhibit strong differences in expression between subjects.</p>
-<p><em>Figure 2.7 Sex-linked genes exhibit strong subject bias</em></p>
+<p><em>Figure S7. COMMD6 expression is not influenced by subject identity</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="spatialLIBD_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="1344"></p>
+<p><img src="to_explore_files/figure-html/unnamed-chunk-37-1.png" class="img-fluid figure-img" width="576"></p>
 </figure>
 </div>
 </div>
 </div>
-<p>The two remaining features with potential subject bias (MTRNR2L1 and MTRNR2L8) are both highly deviant and spatially variable. These lncRNAs have an unknown biological function. Spatial expression plots illustrate that these features display strong subject-biased expression and are also clearly enriched in certain spatial domains. MTRNR2L1 and MTRNR2L8 are perfect examples of features that may introduce noise if included in spatial domain clustering.</p>
-<p><em>Figure 2.8 Successful identification subject-biased, spatially variable genes</em></p>
+</section>
+</section>
+</section>
+<section id="odd-sinusoidal-pattern-in-binomial-deviance-model" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="odd-sinusoidal-pattern-in-binomial-deviance-model"><span class="header-section-number">5.2</span> Odd sinusoidal pattern in binomial deviance model?</h2>
+<p>We found an add sinusoidal pattern emerges when comparing ranks from <code>scry::devianceFeatureSelection</code> with any dataset. This only occurs in the worst ranking features and so doesn’t appear when limiting the binomial deviance model to SVGs. We would anticipate increased noise in the relationship between ranks produced from the different models (with and without batch), but this structured pattern is odd.</p>
+<section id="spatiallibd" class="level3" data-number="5.2.1">
+<h3 data-number="5.2.1" class="anchored" data-anchor-id="spatiallibd"><span class="header-section-number">5.2.1</span> spatialLIBD</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>bd <span class="ot">&lt;-</span> <span class="fu">devianceFeatureSelection</span>(<span class="fu">counts</span>(spe), <span class="at">fam=</span><span class="st">"binomial"</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>bd.batch <span class="ot">&lt;-</span> <span class="fu">devianceFeatureSelection</span>(<span class="fu">counts</span>(spe), <span class="at">fam=</span><span class="st">"binomial"</span>, </span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">batch=</span><span class="fu">as.factor</span>(spe<span class="sc">$</span>subject))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><em>Figure S8. Influence of subject identity on rank calculated from binomial deviance model (all features)</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="spatialLIBD_files/figure-html/view mtrnr plot-1.png" class="img-fluid figure-img" width="1344"></p>
+<p><img src="to_explore_files/figure-html/unnamed-chunk-45-1.png" class="img-fluid figure-img" width="576"></p>
 </figure>
 </div>
 </div>
 </div>
-<p>Lastly, RPS26 and MT3 do not display such strong subject-specific expression. This indicates that our original thresholds chosen without consideration of the location of features from the mitochondrial genome was most appropriate.</p>
-<p><em>Figure 2.9 RPS26 and MT3 should not be excluded due to bias</em></p>
+<p>This is true when we change the seed.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">456</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>bd2 <span class="ot">&lt;-</span> <span class="fu">devianceFeatureSelection</span>(<span class="fu">counts</span>(spe), <span class="at">fam=</span><span class="st">"binomial"</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>bd2.batch <span class="ot">&lt;-</span> <span class="fu">devianceFeatureSelection</span>(<span class="fu">counts</span>(spe), <span class="at">fam=</span><span class="st">"binomial"</span>, </span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">batch=</span><span class="fu">as.factor</span>(spe<span class="sc">$</span>subject))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><em>Figure S9. The linear relationship between feature ranks and the sinusoidal pattern are reproducible with different random number seeds</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="spatialLIBD_files/figure-html/view additional plots-1.png" class="img-fluid figure-img" width="1344"></p>
+<p><img src="to_explore_files/figure-html/unnamed-chunk-52-1.png" class="img-fluid figure-img" width="576"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="mbv-dataset" class="level3" data-number="5.2.2">
+<h3 data-number="5.2.2" class="anchored" data-anchor-id="mbv-dataset"><span class="header-section-number">5.2.2</span> MBv dataset</h3>
+<p>The effect is also seen in our MBv dataset.</p>
+<p><em>Figure S10. Sinusoidal pattern in MBv data when comparing two different batch effects</em></p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="to_explore_files/figure-html/unnamed-chunk-56-1.png" class="img-fluid figure-img" width="576"></p>
 </figure>
 </div>
 </div>
 </div>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->
@@ -852,14 +833,11 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="./index.html" class="pagination-link" aria-label="Background">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Background</span></span>
+      <a href="./mbv_subject.html" class="pagination-link" aria-label="MBv: batch = subject">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">MBv: batch = subject</span></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./mbv_slide.html" class="pagination-link" aria-label="MBv: batch = slide">
-        <span class="nav-page-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">MBv: batch = slide</span></span> <i class="bi bi-arrow-right-short"></i>
-      </a>
   </div>
 </nav>
 </div> <!-- /content -->
