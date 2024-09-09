@@ -8,10 +8,6 @@ echo: false
 editor: visual
 ---
 
-##### to do
-
-JACQUI YOU NEED TO CHANGE THE CLUSTER MARKER "BAD" TO "LOW UMI"
-
 ```{r setup}
 #| output: false
 library(SpatialExperiment)
@@ -19,65 +15,36 @@ library(dplyr)
 library(ggplot2)
 library(ggspavis)
 library(gridExtra)
+library(ggrepel)
 source("code/helper_functions.r")
 load("processed-data/spe_norm.Rdata")
 ```
 
-Based on
+## Find subject-biased features
+
+We performed the `scry::devianceFeatureSelection` with `batch= subject` on only the 2098 SVGs.
 
 ```{r read bindev results}
 #| echo: true
 brain.df = read.csv("processed-data/bindev_default-brain_svgs-only.csv")
 ```
 
-## WM influence check
-
-Make sure that top WM markers aren't super different
-
-```{r plot wm default}
-wm1 <- ggplot(brain.df, aes(x=dev_default, y=dev_brain, 
-                          color=gene_name %in% c("MAL","MBP","MAG","OLIG1")))+
-  geom_point()+
-  geom_point(data=filter(brain.df, gene_name %in% c("MAL","MBP","MAG","OLIG1")))+
-  scale_x_log10()+scale_y_log10()+
-  #scale_color_viridis_c(option="F", direction=-1)+
-  scale_color_manual(values=c("black","red"))+
-  geom_abline(aes(slope=1, intercept=0), lty=2)+
-  labs(x="deviance (no batch)", y="deviance (batch)", color="WM markers",
-       subtitle="\u0394 deviance")+
-  theme_bw()+theme(legend.position="none")
+```{r skipped}
+#| eval: false
+#| output: false
+# summary of SVG ranks when binomial deviance model was performed on all 36601 features
+cat("Summary of SVG rank (batch= subject):\n")
+summary(all.df[brain.df$gene,"rank_brain"])
 ```
 
-```{r plot wm batch}
-wm2 <- ggplot(brain.df, aes(x=rank_default, y=rank_brain, 
-                          color=gene_name %in% c("MAL","MBP","MAG","OLIG1")))+
-  geom_point(size=.5)+
-  geom_point(data=filter(brain.df, gene_name %in% c("MAL","MBP","MAG","OLIG1")))+
-  scale_y_reverse()+
-  scale_color_manual(values=c("black","red"))+
-  geom_abline(aes(slope=-1, intercept=0), lty=2)+
-  labs(x="rank (no batch)", y="rank (batch)", color="WM markers",
-       subtitle="\u0394 rank")+
-  theme_bw()+theme(legend.position="none")
-```
-
-```{r view wm markers}
-#| fig-height: 3
-#| fig-width: 6
-grid.arrange(wm1, wm2, ncol=2, top="WM markers (red) not affected by batch = subject", 
-             bottom="WM markers: MAL, MBP, MAG, OLIG1")
-```
-
-This gives us initial assurance that our feature-based QC approach is not identifying features that exhibit differences in gene expression between subjects due to the layer composition of the sample.
-
-## Find subject-biased features
+To isolate the influence of `batch= subject` we calculated the relative change in deviance and the difference in rank.
 
 ```{r calc diff}
 #| echo: true
 # care about loss in deviance
-brain.df$d.diff = (brain.df[,"dev_default"]-brain.df[,"dev_brain"])/brain.df$dev_brain
+brain.df$d.diff = (brain.df$dev_default-brain.df$dev_brain)/brain.df$dev_brain
 # care about increase in rank
-brain.df$r.diff = brain.df[,"rank_brain"]-brain.df[,"rank_default"]
+brain.df$r.diff = brain.df$rank_brain-brain.df$rank_default
 ```
 
 ```{r plot dev diff}
@@ -87,7 +54,10 @@ dev1 <- ggplot(brain.df, aes(x=dev_default, y=dev_brain, color=d.diff))+
   scale_color_viridis_c(option="F", direction=-1)+
   geom_abline(aes(slope=1, intercept=0), lty=2)+
   labs(x="deviance (no batch)", y="deviance (batch)", subtitle="\u0394 deviance")+
-  theme_bw()
+  theme_bw()+theme(legend.position="inside", legend.position.inside=c(.15,.8),
+                   legend.title = element_text(size = 10), 
+                   legend.text  = element_text(size = 10),
+                   legend.key.size = unit(.6, "lines"))
 ```
 
 ```{r plot rank diff}
@@ -96,16 +66,87 @@ rank1 <- ggplot(brain.df, aes(x=rank_default, y=rank_brain, color=r.diff))+
   scale_color_viridis_c(option="F", direction=-1)+
   geom_abline(aes(slope=-1, intercept=0), lty=2)+
   labs(x="rank (no batch)", y="rank (batch)", subtitle="\u0394 rank")+
-  theme_bw()
+  theme_bw()+theme(legend.position="inside", legend.position.inside=c(.85,.8),
+                   legend.title = element_text(size = 10), 
+                   legend.text  = element_text(size = 10),
+                   legend.key.size = unit(.6, "lines"))
 ```
+
+*Figure 4.1 Subject identity generates greater and more continuous changes in deviance and rank than slide identity*
 
 ```{r view diff plots}
-#| fig-height: 4
-#| fig-width: 9
-grid.arrange(dev1, rank1, ncol=2, top="Inclusion of `batch = subject` has a broader and more continuous impact than `batch = slide`")
+#| fig-height: 3.5
+#| fig-width: 7
+grid.arrange(dev1, rank1, ncol=2)
 ```
 
+The influence of `batch= subject` is greater in magnitude than that of `batch= slide` as determined by the ranges of relative change in deviance and rank difference in each model.
+
+```{r}
+slide.df = read.csv("processed-data/bindev_default-slide_svgs-only.csv")
+slide.df$d.diff = (slide.df$dev_default-slide.df$dev_slide)/slide.df$dev_slide
+slide.df$r.diff = slide.df$rank_slide-slide.df$rank_default
+```
+
+```{r}
+batch.df = bind_rows(mutate(slide.df[,c("gene","gene_name","d.diff","r.diff")], batch="slide"),
+                     mutate(brain.df[,c("gene","gene_name","d.diff","r.diff")], batch="subject")) %>%
+  mutate(d.diff_bin = cut(d.diff, breaks=c(0,1,2,3,4)),
+         r.diff_bin= cut(r.diff, breaks=seq(-100,1000,length.out=6)))
+```
+
+```{r}
+dev2 <- ggplot(batch.df, aes(x=d.diff_bin, fill=batch))+
+  geom_bar(stat="count", color="black",
+           position=position_dodge2(width=.9, preserve="single"))+
+  scale_x_discrete(drop=F)+
+  scale_fill_manual(values=c("grey90","grey40"))+
+  scale_y_continuous(trans = scales::pseudo_log_trans(sigma = 1),
+                breaks=10^(0:4), labels=format(10^(0:4), scientific=F))+
+  labs(x="\u0394 deviance (binned)", y="# SVGs",title="deviance")+
+  theme_bw()+
+  theme(legend.position="inside", legend.position.inside=c(.8,.8),
+                   legend.title = element_text(size = 8), 
+                   legend.text  = element_text(size = 8),
+                   legend.key.size = unit(.6, "lines"),
+        plot.margin=unit(c(.2,.2,.5,.2), units="cm"),
+        axis.title.x=element_text(margin=unit(c(.5,0,0,0),units="cm")))
+```
+
+```{r}
+rank2 <- ggplot(batch.df, aes(x=r.diff_bin, fill=batch))+
+  geom_bar(stat="count", color="black",
+           position=position_dodge2(width=.9, preserve="single"))+
+  scale_x_discrete(drop=F)+
+  scale_fill_manual(values=c("grey90","grey40"))+
+  scale_y_continuous(trans = scales::pseudo_log_trans(sigma = 1),
+                breaks=10^(0:4), labels=format(10^(0:4), scientific=F))+
+  labs(x="\u0394 rank (binned)", y="# SVGs",title="rank")+
+  theme_bw()+
+  theme(legend.position="inside", legend.position.inside=c(.8,.8),
+                   legend.title = element_text(size = 8), 
+                   legend.text  = element_text(size = 8),
+                   legend.key.size = unit(.6, "lines"),
+        axis.text.x=element_text(angle=45, hjust=1, size=6))
+```
+
+*Figure 4.2 Inclusion of subject identity in the binomial deviance model is more impactful than slide*
+
+```{r}
+#| fig-height: 2.5
+#| fig-width: 5
+grid.arrange(dev2, rank2, ncol=2)
+```
+
+Also, these changes are more continuous (Figure 4.1), complicating the selection of a specific value for either metric to isolate potentially subject-biased genes.
+
+## Improved method for selecting biased genes
+
+We decided to explore cutoffs based on the standard deviance (SD) of deviance and rank difference metrics to find a data-driven thresholding approach.
+
 ### SD cutoff: deviance
+
+The wide range of relative change in deviance resulting from the inclusion of `batch= subject` was evident in the fact that some features were as many as 30 SDs away from the mean.
 
 ```{r calc dev sd}
 #| echo: true
@@ -115,6 +156,8 @@ brain.df$nSD_dev = (brain.df$d.diff-mean1)/sd1
 summary(brain.df$nSD_dev)
 ```
 
+Since our goal is to identify only the most strongly biased features that have the potential to impair spatial domain clustering, we explored thresholds based on the number of deviations (nSD) starting with nSD=5 with a step-size of 5.
+
 ```{r dev sd bin}
 # dev sd interval higher
 sd.interval = 5
@@ -123,48 +166,68 @@ brain.df$nSD.bin_dev = cut(abs(brain.df$nSD_dev), right=FALSE,
                 include.lowest=TRUE)
 ```
 
-Binning the nSD( % diff. deviance) helps to identify a threshold.
-
 ```{r plot dev sd hist}
 col.pal = RColorBrewer::brewer.pal(length(unique(brain.df$nSD.bin_dev)), "YlOrRd")
 col.pal[1] = "grey"
 
-dev2 = ggplot(brain.df, aes(x=d.diff, fill=nSD.bin_dev))+
+dev3 = ggplot(brain.df, aes(x=d.diff, fill=nSD.bin_dev))+
         geom_histogram(color="grey20", bins=50)+
   scale_fill_manual(values=col.pal)+
-        labs(x="% difference deviance",
-             fill="n abs(SD)", y="# genes")+
+        labs(x="\u0394 deviance",
+             fill="n abs(SD)", y="# SVGs")+
         scale_y_continuous(trans = scales::pseudo_log_trans(sigma = 1),
                 breaks=10^(0:4), labels=format(10^(0:4), scientific=F))+
-        theme_bw()+theme(legend.position="inside",legend.position.inside=c(.8,.7))
+        theme_bw()+
+  theme(legend.position="inside",legend.position.inside=c(.8,.7),
+        aspect.ratio=1)
 ```
 
 ```{r plot dev sd scatt}
-dev3 = ggplot(brain.df, aes(x=dev_default, y=dev_brain, color=nSD.bin_dev))+
+dev4 = ggplot(brain.df, aes(x=dev_default, y=dev_brain, color=nSD.bin_dev))+
   geom_point()+
   scale_x_log10()+scale_y_log10()+
   scale_color_manual(values=col.pal)+
+  geom_text_repel(data=filter(brain.df, gene_name %in% 
+                                c("MTRNR2L8","MTRNR2L1","SERPINA3",
+                                  "CHI3L1","XIST")),
+                  aes(label=gene_name))+
   geom_abline(aes(slope=1, intercept=0), lty=2)+
   labs(x="deviance (no batch)",
        y="deviance (batch)")+
-  theme_bw()+theme(legend.position="none")
+  theme_bw()+theme(legend.position="none", aspect.ratio=1)
 ```
+
+*Figure 4.3 SVGs with relative change in deviance \>= 5 SDs from the mean appear to represent subject-biased genes*
 
 ```{r view dev sd plots}
-#| fig-height: 4
+#| fig-height: 3.5
 #| fig-width: 7
-grid.arrange(dev2, dev3, ncol=2, top="ADD SOME TITLE", bottom="batch = subject")
+grid.arrange(dev3, dev4, ncol=2)
 ```
 
-Since we're still establishing the method we need to check the genes against layer-specific effects.
+The nSD bins split the SVGs such that a nSD cutoff\>=5 separated features with a continuous distribution of delta deviance from the outliers.
+
+Five of the SVGs with a nSD deviance\>=5 were already identified and confirmed as biased: MTRNR2L12 (Figure 3.4), MTRNR2L8 (Figure 3.5), MTRNR2L1 (Figure 3.8), SERPINA3 (Figure 3.8), CHI3L1 (Figure 3.8). XIST was also identified as a subject-biased SVG. We spot-checked the remaining 6 potentially subject-biased SVGs to verify that this threshold truly captured subject-driven noise.
 
 ```{r check dev sd cutoff}
+slide.found = c("MTRNR2L8", "MTRNR2L1","MTRNR2L12", "SERPINA3", "CHI3L1", "XIST")
 check.dev.sd = unique(filter(brain.df, nSD_dev>=5)$gene)
 names(check.dev.sd) = rowData(spe)[check.dev.sd,"gene_name"]
 ```
 
+Of these remaining 5 SVGs, 3 were close to the cutoff of nSD\>=5 (SPP1, HSPB1, HSPA1B).
+
+```{r check genes}
+filter(brain.df, nSD.bin_dev!="[0,5)",
+       gene_name %in% setdiff(brain.df$gene_name, slide.found)
+       ) %>%
+  select(gene, gene_name, d.diff, nSD_dev, nSD.bin_dev) %>% arrange(nSD_dev)
+```
+
 ```{r dev sd check df}
-check.dev.mtx <- cbind(sapply(check.dev.sd, function(x) logcounts(spe)[x,]))
+check.dev.mtx <- cbind(sapply(check.dev.sd[c("SPP1","HSPB1","HSPA1B",
+                                             "DNAJB1","HSPA1A")], 
+                              function(x) logcounts(spe)[x,]))
 
 spd.expr.df = cbind.data.frame(
   as.data.frame(colData(spe)[,c("brain","slide","clust_k7_svg.raw_layers")]),
@@ -174,32 +237,94 @@ spd.expr.df = cbind.data.frame(
                                         labels=c("L1","L1","L2","L3","L5/6","WM"))) %>%
   group_by(brain, slide, clust_k7_svg.raw_layers) %>% 
   summarise_all(mean) %>%
-  tidyr::pivot_longer(names(check.dev.sd), 
+  tidyr::pivot_longer(c("SPP1","HSPB1","HSPA1B","DNAJB1","HSPA1A"),
                       names_to="gene_name", values_to="avg.logcounts")
 ```
 
-##### to do
-
-JACQUI YOU NEED TO SPLIT THIS PLOT IN HALF AND THEN PUT IT SIDE BY SIDE
-
-```{r plot dev sd check}
-dev4 = ggplot(spd.expr.df,
-       aes(x=clust_k7_svg.raw_layers, y=avg.logcounts, fill=slide))+
+```{r}
+top1 = ggplot(filter(spd.expr.df, gene_name %in% c("SPP1","HSPB1","HSPA1B")), 
+       aes(x=clust_k7_svg.raw_layers, y=avg.logcounts, 
+                        fill=slide, color=slide))+
   geom_boxplot()+
-  scale_fill_brewer(palette="Paired")+
-  facet_grid(rows=vars(gene_name), scales="free_y")+
-  labs(x="spatial domain (SVGs k=7)", y="mean logcounts expr",
-       title="Possible subject-biased genes: deviance outlier")+
-  theme_bw()+theme(legend.text=element_text(size=8))
+  scale_color_brewer(palette="Dark2")+
+  scale_fill_brewer(palette="Dark2")+
+  facet_grid(cols=vars(gene_name))+
+  labs(y="mean logcounts expr",title="nSD dev. < 6")+
+  theme_bw()+theme(axis.title.x=element_blank(), legend.position="none")
 ```
 
-```{r view dev sd check}
-#| fig-height: 9
-#| fig-width: 5
-dev4
+```{r}
+bottom1 = ggplot(filter(spd.expr.df, gene_name %in% 
+                          c("DNAJB1","HSPA1A")), 
+       aes(x=clust_k7_svg.raw_layers, y=avg.logcounts, 
+                        fill=slide, color=slide))+
+  geom_boxplot()+
+  scale_color_brewer(palette="Dark2")+
+  scale_fill_brewer(palette="Dark2")+
+  facet_grid(cols=vars(gene_name))+
+  labs(y="mean logcounts expr",title="nSD dev. > 8")+
+  theme_bw()+theme(axis.title.x=element_blank(),
+                   plot.margin=unit(c(.2,1.5,.2,.2), units="cm"),
+                   legend.margin = margin(c(.2,.2,.2,.8), unit="cm"))
 ```
 
-Satisfied with a threshold of 5 standard deviations for delta deviance
+SPP1 was the only subject-biased SVG (identified by a relative change in deviance threshold nSD\>=5) that displayed elevated expression specifically in spots of a single spatial domain.
+
+*Figure 4.4 SPP1 exhibits enrichment within a specific DLPFC spatial domain*
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 7
+grid.arrange(top1, bottom1, nrow=2)
+```
+
+Slides V13F27-338, V13F27-348, and V13Y10-023 appeared to contain samples/ subjects with outlier SPP1 expression. We compared the spatial expression of SPP1 with that of MBP to examine if enrichment in WM spots was contributing the elevated expression in subjects on these slides.
+
+```{r spe list}
+spe_list = unique(spe$sample_id)
+names(spe_list) = lapply(spe_list, function(x) unique(colData(spe)[spe$sample_id==x,"brain"]))
+spe_list = lapply(spe_list, function(x) spe[,colData(spe)$sample_id==x])
+```
+
+```{r}
+#| output: false
+mbp.gene = rownames(spe)[rowData(spe)$gene_name=="MBP"]
+p1 <- lapply(seq_along(spe_list), function(x) {
+  plotSpots(spe_list[[x]], annotate=mbp.gene, 
+            assay_name="logcounts", point_size=.1)+
+    scale_color_gradient(limits=c(0,max(logcounts(spe)[mbp.gene,])), 
+                         low='grey90', high='black')+
+    labs(title=unique(spe_list[[x]]$brain))+
+    theme(legend.position="none", plot.title=element_text(size=8))
+})
+g1 = do.call(grid.arrange, c(p1[c(1:8,21:24)], ncol=4, top="MBP", newpage=F))
+```
+
+```{r spp1 spatial}
+#| output: false
+p2 <- lapply(c(1:8,21:24), function(x) {
+  plotSpots(spe_list[[x]], annotate=check.dev.sd['SPP1'], 
+            assay_name="logcounts", point_size=.1)+
+    scale_color_gradient(limits=c(0,max(logcounts(spe)[check.dev.sd['SPP1'],])), 
+                         low='grey90', high='black')+
+    labs(title=unique(spe_list[[x]]$brain))+
+    theme(legend.position="none", plot.title=element_text(size=8))
+})
+g2 = do.call(grid.arrange, c(p2, ncol=4, top="SPP1", newpage=F))
+```
+
+*Figure 4.5 SPP1 is definitively subject-biased and spatially variable*
+
+```{r view mbp sp1}
+#| fig-height: 4
+#| fig-width: 9
+grid.arrange(g1, g2, layout_matrix=matrix(c(1,1,1,1,NA,2,2,2,2), nrow=1),
+             bottom="Feature-specific colors scales are fixed/equal across all subplots")
+```
+
+We conclude that although SPP1 is correlated with MBP expression in some samples/ subjects, there are also strong subject-specific expression patterns unrelated to WM (Br5902, Br5993, Br8092). SPP1 is the perfect example of a gene we want to exclude because it is associated with spatial domains for some subjects/samples but is definitively errant in others. Although this may be of interest down the line when testing for differential expression between conditions, SPP1 seems poised to introduce noise to spatial clustering results if included in the input SVG list.
+
+At this point we were satisfied with a threshold of 5 standard deviations from the mean relative change in deviance.
 
 ```{r set dev sd cutoff}
 #| echo: true
@@ -208,29 +333,31 @@ brain.df$dev_outlier = brain.df$nSD_dev>=5
 
 ### SD cutoff: rank
 
+The dispersion of rank difference introduced with the inclusion of `batch= subject` was less than that of relative change in deviance (the furthest outlier feature was only 11 SDs away from the mean rank difference, compared to 30).
+
 ```{r calc rank sd}
 #| echo: true
 mean2 = mean(brain.df$r.diff)
 sd2 = sd(brain.df$r.diff)
-brain.df$nSD_rank = (brain.df$r.diff-mean1)/sd2
+brain.df$nSD_rank = (brain.df$r.diff-mean2)/sd2
 summary(brain.df$nSD_rank)
 ```
 
-SOME TEXT IS NEEDED HERE TO BREAK THINGS UP
+Because of this reduced range we explored thresholds based on nSD of rank difference in steps of 3 or 5.
 
 ```{r rank sd bin 3}
 # rank sd interval
 sd.interval = 3
-brain.df$nSD.bin_rank = cut(abs(brain.df$nSD_rank), right=FALSE,
+brain.df$nSD.bin3_rank = cut(abs(brain.df$nSD_rank), right=FALSE,
                 breaks=seq(0,max(brain.df$nSD_rank)+sd.interval, by=sd.interval),
                 include.lowest=TRUE)
 ```
 
 ```{r plot rank sd 3 hist}
-col.pal2 = RColorBrewer::brewer.pal(length(unique(brain.df$nSD.bin_rank)), "YlOrRd")
+col.pal2 = RColorBrewer::brewer.pal(length(unique(brain.df$nSD.bin3_rank)), "YlOrRd")
 col.pal2[1] = "grey"
 
-rank2 <- ggplot(brain.df, aes(x=r.diff, fill=nSD.bin_rank))+
+rank2 <- ggplot(brain.df, aes(x=r.diff, fill=nSD.bin3_rank))+
   geom_histogram(color="grey20", bins=30)+
   scale_fill_manual(values=col.pal2)+
   labs(x="rank difference", fill="n abs(SD)", y="# genes",
@@ -241,28 +368,29 @@ rank2 <- ggplot(brain.df, aes(x=r.diff, fill=nSD.bin_rank))+
 ```
 
 ```{r plot rank sd 3 scatter}
-rank3 = ggplot(brain.df, aes(x=rank_default, y=rank_brain, color=nSD.bin_rank))+
+rank3 <- ggplot(brain.df, aes(x=rank_default, y=rank_brain, color=nSD.bin3_rank))+
   geom_point()+scale_y_reverse()+
   scale_color_manual(values=col.pal2)+
   geom_abline(aes(slope=-1, intercept=0), lty=2)+
-  labs(x="rank (no batch)",y="rank (batch)", title="nSD bin width = 3")+
+  labs(x="rank (no batch)",y="rank (batch)", title="nSD bin width = 3",
+       color="n abs(SD)")+
   theme_bw()+theme(legend.position="inside",legend.position.inside=c(.8,.7))
 ```
 
 ```{r rank sd bin 5}
 sd.interval = 5
-brain.df$nSD.bin_rank = cut(abs(brain.df$nSD_rank), right=FALSE,
+brain.df$nSD.bin5_rank = cut(abs(brain.df$nSD_rank), right=FALSE,
                 breaks=seq(0,max(brain.df$nSD_rank)+sd.interval, by=sd.interval),
                 include.lowest=TRUE)
 ```
 
 ```{r plot rank sd 5 hist}
-col.pal2 = RColorBrewer::brewer.pal(length(unique(brain.df$nSD.bin_rank)), "YlOrRd")
-col.pal2[1] = "grey"
+col.pal3 = RColorBrewer::brewer.pal(length(unique(brain.df$nSD.bin5_rank)), "YlOrRd")
+col.pal3[1] = "grey"
 
-rank4 <- ggplot(brain.df, aes(x=r.diff, fill=nSD.bin_rank))+
+rank4 <- ggplot(brain.df, aes(x=r.diff, fill=nSD.bin5_rank))+
   geom_histogram(color="grey20", bins=30)+
-  scale_fill_manual(values=col.pal2)+
+  scale_fill_manual(values=col.pal3)+
   labs(x="rank difference", fill="n abs(SD)", y="# genes", title="nSD bin width = 5")+
   scale_y_continuous(trans = scales::pseudo_log_trans(sigma = 1),
                      breaks=10^(0:4), labels=format(10^(0:4), scientific=F))+
@@ -270,19 +398,24 @@ rank4 <- ggplot(brain.df, aes(x=r.diff, fill=nSD.bin_rank))+
 ```
 
 ```{r plot rank sd 5 scatter}
-rank5 = ggplot(brain.df, aes(x=rank_default, y=rank_brain, color=nSD.bin_rank))+
+rank5 <- ggplot(brain.df, aes(x=rank_default, y=rank_brain, color=nSD.bin5_rank))+
   geom_point()+scale_y_reverse()+
-  scale_color_manual(values=col.pal2)+
+  scale_color_manual(values=col.pal3)+
   geom_abline(aes(slope=-1, intercept=0), lty=2)+
-  labs(x="rank (no batch)",y="rank (batch)", title="nSD bin width = 5")+
+  labs(x="rank (no batch)",y="rank (batch)", title="nSD bin width = 5",
+       color="n abs(SD)")+
   theme_bw()+theme(legend.position="inside",legend.position.inside=c(.8,.7))
 ```
+
+*Figure 4.6 Viable nSD(rank difference) cutoffs at 5 or 6*
 
 ```{r view rank sd plots}
 #| fig-height: 7
 #| fig-width: 7
-grid.arrange(rank2, rank3, rank4, rank5, ncol=2, top="Viable nSD(\u0394 rank) cutoffs at 5 or 6")
+grid.arrange(rank2, rank3, rank4, rank5, ncol=2)
 ```
+
+Based on how the different bin sizes tracked with the distribution of SVG rank difference after the inclusion of `batch= subject`, we determined that an appropriate threshold occurred either at nSD\>=5 or nSD\>=6.
 
 ```{r see rank sd 5 to 6}
 #| echo: true
@@ -290,13 +423,17 @@ filter(brain.df, between(nSD_rank,5,7)) %>% arrange(desc(nSD_rank)) %>%
   select(gene_name, r.diff, nSD_rank)
 ```
 
+Of the SVGs on the cusp of being potentially subject-biased as determined by rank difference, XIST, AL627171.2, and HSPB1 have already been evaluated.
+
 ```{r check rank sd 5 to 6}
 check.rank.sd = filter(brain.df, between(nSD_rank,5,7))$gene
 names(check.rank.sd) = rowData(spe)[check.rank.sd,"gene_name"]
 ```
 
 ```{r check rank sd df}
-check.rank.mtx <- cbind(sapply(check.rank.sd, function(x) logcounts(spe)[x,]))
+check.rank.mtx <- cbind(sapply(check.rank.sd[c("C11orf96","NEAT1","CLDN11",
+                                               "MT1M","PLPP3")],
+                               function(x) logcounts(spe)[x,]))
 
 spd.expr.df2 = cbind.data.frame(
   as.data.frame(colData(spe)[,c("brain","slide","clust_k7_svg.raw_layers")]),
@@ -306,40 +443,50 @@ spd.expr.df2 = cbind.data.frame(
                                         labels=c("L1","L1","L2","L3","L5/6","WM"))) %>%
   group_by(brain, slide, clust_k7_svg.raw_layers) %>% 
   summarise_all(mean) %>%
-  tidyr::pivot_longer(names(check.rank.sd), 
+  tidyr::pivot_longer(c("C11orf96","NEAT1","CLDN11","MT1M","PLPP3"), 
                       names_to="gene_name", values_to="avg.logcounts")
 ```
 
-##### to do
-
-JACQUI, SPLIT THIS ONE IN TWO (\>=5, \>=6) AND PUT SIDE BY SIDE
-
-```{r plot rank sd 5 to 6}
-#| fig-height: 8
-#| fig-width: 7
-ggplot(spd.expr.df2,
-       aes(x=clust_k7_svg.raw_layers, y=avg.logcounts, fill=slide))+
+```{r plot sd 5 check}
+sd5 <- ggplot(filter(spd.expr.df2, gene_name %in% c("PLPP3","MT1M","CLDN11")),
+       aes(x=clust_k7_svg.raw_layers, y=avg.logcounts, fill=slide, color=slide))+
   geom_boxplot()+
-  scale_fill_brewer(palette="Paired")+
-  facet_grid(rows=vars(gene_name), scales="free_y")+
+  scale_fill_brewer(palette="Dark2")+
+  scale_color_brewer(palette="Dark2")+
+  facet_grid(cols=vars(gene_name))+
   labs(x="spatial domain (SVGs k=7)", y="mean logcounts expr",
-       title="Possible subject-biased genes: deviance outlier")+
-  theme_bw()+theme(legend.text=element_text(size=8))
+       title="nSD rank < 6")+
+  theme_bw()+theme(axis.title.x=element_blank(),
+                   legend.position="none")
 ```
 
-Cldn11 stands out as a possible marker for WM that may not be truly biased by subject but actually reflect varying tissue composition.
-
-Check spatial expression.
-
-```{r spe list}
-spe_list = unique(spe$sample_id)
-names(spe_list) = lapply(spe_list, function(x) unique(colData(spe)[spe$sample_id==x,"brain"]))
-spe_list = lapply(spe_list, function(x) spe[,colData(spe)$sample_id==x])
+```{r plot sd6 check}
+sd6 <- ggplot(filter(spd.expr.df2, gene_name %in% c("C11orf96","NEAT1")),
+       aes(x=clust_k7_svg.raw_layers, y=avg.logcounts, fill=slide, color=slide))+
+  geom_boxplot()+
+  scale_fill_brewer(palette="Dark2")+
+  scale_color_brewer(palette="Dark2")+
+  facet_grid(cols=vars(gene_name))+
+  labs(x="spatial domain (SVGs k=7)", y="mean logcounts expr",
+       title="nSD rank <7")+
+  theme_bw()+theme(axis.title.x=element_blank(),
+                   plot.margin=unit(c(.2,1.5,.2,.2), units="cm"),
+                   legend.margin = margin(c(.2,.2,.2,.8), unit="cm"))
 ```
+
+*Figure 4.7 Potential subject-biased SVGs with nSD rank difference \<6 do not exhibit strong outliers*
+
+```{r view rank check}
+#| fig-height: 4.5
+#| fig-width: 7
+grid.arrange(sd5, sd6, nrow=2)
+```
+
+We can see that unlike the potential subject-biased features in Figure 4.5 and the bottom of Figure 4.8, the SVGs with nSD rank difference \<6 do not exhibit strong single-subject outliers. Additionally, CLDN11 stands out as a possible marker for WM that may not be truly biased by subject but may actually reflect varying tissue composition.
 
 ```{r cldn11 spatial}
-#| warning: false
-p1 <- lapply(seq_along(spe_list), function(x) {
+#| output: false
+p3 <- lapply(seq_along(spe_list), function(x) {
   plotSpots(spe_list[[x]], annotate=check.rank.sd["CLDN11"], 
             assay_name="logcounts", point_size=.1)+
     scale_color_gradient(limits=c(0,max(logcounts(spe)[check.rank.sd["CLDN11"],])), 
@@ -347,20 +494,30 @@ p1 <- lapply(seq_along(spe_list), function(x) {
     labs(title=unique(spe_list[[x]]$brain))+
     theme(legend.position="none", plot.title=element_text(size=8))
 })
+g3 = do.call(grid.arrange, c(p3, ncol=4, top="CLDN11", newpage=F))
 ```
 
-```{r view cldn11}
+```{r all mbp plot}
+#| output: false
+g1all = do.call(grid.arrange, c(p1, ncol=4, top="MBP", newpage=F))
+```
+
+Looking at a the unscaled logcounts expression confirms that CLDN11 is just spatially variable and correlated with MBP and does not not exhibit any further subject bias.
+
+*Figure 4.8 CLDN11 expression differences between subjects is driven by tissue composition*
+
+```{r view mbp cldn11}
 #| fig-height: 7
-#| fig-width: 4
-do.call(grid.arrange, c(p1, ncol=4, top="CLDN11", 
-                                   bottom="color scales are fixed/equal across all sub-plots"))
+#| fig-width: 9
+grid.arrange(g1all, g3, layout_matrix=matrix(c(1,1,1,1,NA,2,2,2,2), nrow=1),
+             bottom="Feature-specific colors scales are fixed/equal across all subplots")
 ```
 
-CLDN11 has nSD(rank)\<6 so we decided to check another gene with nSD(rank)\<6 to see if it was worth including these genes.
+Checking the two remaining SVGs with nSD rank difference \<6 establishes that PLPP3 does not exhibit any subject bias and the between-subject impact on MT1M expression is so-so.
 
 ```{r plpp3 spatial}
-#| warning: false
-p2 <- lapply(seq_along(spe_list), function(x) {
+#| output: false
+p4 <- lapply(seq_along(spe_list), function(x) {
   plotSpots(spe_list[[x]], annotate=check.rank.sd["PLPP3"], 
             assay_name="logcounts", point_size=.1)+
     scale_color_gradient(limits=c(0,max(logcounts(spe)[check.rank.sd["PLPP3"],])), 
@@ -368,84 +525,101 @@ p2 <- lapply(seq_along(spe_list), function(x) {
     labs(title=unique(spe_list[[x]]$brain))+
     theme(legend.position="none", plot.title=element_text(size=8))
 })
+g4 = do.call(grid.arrange, c(p4, ncol=4, top="PLPP3", newpage=F))
 ```
 
-```{r view plpp3}
+```{r spatial mt1m}
+#| output: false
+p5 <- lapply(seq_along(spe_list), function(x) {
+  plotSpots(spe_list[[x]], annotate=check.rank.sd["MT1M"], 
+            assay_name="logcounts", point_size=.1)+
+    scale_color_gradient(limits=c(0,max(logcounts(spe)[check.rank.sd["MT1M"],])), 
+                         low='grey90', high='black')+
+    labs(title=unique(spe_list[[x]]$brain))+
+    theme(legend.position="none", plot.title=element_text(size=8))
+})
+g5 = do.call(grid.arrange, c(p5, ncol=4, top="MT1M", newpage=F))
+```
+
+*Figure 4.9 Weak or absent subject bias in two remaining SVGs with nSD rank difference \<6*
+
+```{r view plpp3 mt1m}
 #| fig-height: 7
-#| fig-width: 4
-do.call(grid.arrange, c(p2, ncol=4, top="PLPP3", 
-                                   bottom="color scales are fixed/equal across all sub-plots"))
+#| fig-width: 9
+grid.arrange(g4, g5, layout_matrix=matrix(c(1,1,1,1,NA,2,2,2,2), nrow=1),
+             bottom="Feature-specific colors scales are fixed/equal across all subplots")
 ```
 
-We observed no clear subject bias for either CLDN11 or PLPP3 so we settled on a threshold of 6 standard deviations for delta rank.
+Compare that to C11orf96 and NEAT1, which according to Figure 4.8 have subject outliers in slides V13F27-338 and V13F27-348. When viewing spatial expression plots for those two slides and also slide V13Y10-023 (which doesn't appear to have a subject outlier), we can see that C11orf96 expression is subject-biased, although NEAT1 expression appears to mostly correlate with WM.
+
+```{r spatial c11orf96}
+#| output: false
+p6 <- lapply(c(1:8,21:24), function(x) {
+  plotSpots(spe_list[[x]], annotate=check.rank.sd['C11orf96'], 
+            assay_name="logcounts", point_size=.1)+
+    scale_color_gradient(limits=c(0,max(logcounts(spe)[check.rank.sd['C11orf96'],])), 
+                         low='grey90', high='black')+
+    labs(title=unique(spe_list[[x]]$brain))+
+    theme(legend.position="none", plot.title=element_text(size=8))
+})
+g6 = do.call(grid.arrange, c(p6, ncol=4, top="C11orf96", newpage=F))
+```
+
+```{r spatial neat1}
+#| output: false
+p7 <- lapply(c(1:8,21:24), function(x) {
+  plotSpots(spe_list[[x]], annotate=check.rank.sd['NEAT1'], 
+            assay_name="logcounts", point_size=.1)+
+    scale_color_gradient(limits=c(0,max(logcounts(spe)[check.rank.sd['NEAT1'],])), 
+                         low='grey90', high='black')+
+    labs(title=unique(spe_list[[x]]$brain))+
+    theme(legend.position="none", plot.title=element_text(size=8))
+})
+g7 = do.call(grid.arrange, c(p7, ncol=4, top="NEAT1", newpage=F))
+```
+
+*Figure 4.10 C11orf96 expression appears to be correlated with WM in some samples but not others and also exhibit subject bias*
+
+```{r view c11orf96 neat1}
+#| fig-height: 4
+#| fig-width: 9
+grid.arrange(g6, g7, layout_matrix=matrix(c(1,1,1,1,NA,2,2,2,2), nrow=1),
+             bottom="Feature-specific colors scales are fixed/equal across all subplots")
+```
+
+We are not proposing a comprehensive, feature-by-feature decision making process to generate the perfect list of SVGs. Therefore, presented with the choice between a subject bias threshold of nSD rank difference\>=5 or \>=6, we believe that opting for the slightly stricter threshold of \>=6 SD from the mean rank difference is appropriate.
 
 ```{r set rank sd cutoff}
 #| echo: true
 brain.df$rank_outlier = brain.df$nSD_rank>=6
 ```
 
-## Final check all biased genes
+## Cluster results
+
+We isolate biased genes by the data-driven nSD thresholds for the change in deviance and rank introduced with a `batch= subject` effect. In exploring the influence of `batch= subject`, the threshold chosen included all features also identified as slide-biased with `batch= slide`.
 
 ```{r get biased genes}
 #| echo: true
 biased.genes = filter(brain.df, dev_outlier==T | rank_outlier==T)$gene
 names(biased.genes) = rowData(spe)[biased.genes,"gene_name"]
+length(biased.genes)
 ```
 
-```{r biased check df}
-biased.mtx <- cbind(sapply(biased.genes, function(x) logcounts(spe)[x,]))
+*Figure 4.11 Final biased features to remove from SVG list prior to spatial domain clustering*
 
-biased.df = cbind.data.frame(
-  as.data.frame(colData(spe)[,c("brain","slide","clust_k7_svg.raw_layers")]),
-  biased.mtx) %>% 
-  filter(clust_k7_svg.raw_layers!="bad") %>%
-  mutate(clust_k7_svg.raw_layers=factor(clust_k7_svg.raw_layers, 
-                                        levels=c("L1","L1 (2)","L2","L3","L5/6","WM"),
-                                        labels=c("L1","L1","L2","L3","L5/6","WM"))) %>%
-  group_by(brain, slide, clust_k7_svg.raw_layers) %>% 
-  summarise_all(mean) %>%
-  tidyr::pivot_longer(names(biased.genes), 
-                      names_to="gene_name", values_to="avg.logcounts")
-```
-
-```{r plot biased check}
-#| fig-height: 14
-#| fig-width: 7
-ggplot(biased.df,
-       aes(x=clust_k7_svg.raw_layers, y=avg.logcounts, fill=slide))+
-  geom_boxplot()+
-  scale_fill_brewer(palette="Paired")+
-  facet_grid(rows=vars(gene_name), scales="free_y")+
-  labs(x="spatial domain (SVGs k=7)", y="mean logcounts expr",
-       title="Possible subject-biased genes")+
-  theme_bw()+theme(legend.text=element_text(size=8), 
-                   strip.text=element_text(size=8))
-```
-
-Check SPP1
-
-```{r spp1 spatial}
-#| warning: false
-p3 <- lapply(seq_along(spe_list), function(x) {
-  plotSpots(spe_list[[x]], annotate=biased.genes['SPP1'], 
-            assay_name="logcounts", point_size=.1)+
-    scale_color_gradient(limits=c(0,max(logcounts(spe)[biased.genes['SPP1'],])), 
-                         low='grey90', high='black')+
-    labs(title=unique(spe_list[[x]]$brain))+
-    theme(legend.position="none", plot.title=element_text(size=8))
-})
-```
-
-```{r view spp1}
-#| fig-height: 7
+```{r final plot}
+#| fig-height: 4
 #| fig-width: 4
-do.call(grid.arrange, c(p3, ncol=4, top="SPP1", 
-                                   bottom="color scales are fixed/equal across all sub-plots"))
+ggplot(brain.df, aes(x=r.diff, y=d.diff))+
+  geom_point()+
+  geom_point(data=filter(brain.df, gene %in% biased.genes), color="tomato2")+
+  geom_text_repel(data= filter(brain.df, gene %in% biased.genes), 
+                  aes(label=gene_name), size=4)+
+  labs(x="\u0394 rank", y="\u0394 deviance")+
+  theme_bw()
 ```
 
-SPP1 is the perfect example of a gene we want to exclude because it is associated with spatial domains for some subjects/samples but is definitively errant in Br8092, inverse expression pattern in Br5993, and overall increased in Br5902.
-
-## Cluster results
+Finally, we performed `PRECAST` clustering to identify spatial domains after removing all subject-biased SVGs (n=18) from the feature list.
 
 ```{r prep colors}
 cols_cluster = c("#1f77b4FF","#aec7e8FF","#ff7f0eFF","#ffbb78FF","#2ca02cFF","#98df8aFF","#d62728FF")
@@ -454,38 +628,41 @@ cols_7_other = c(cols_cluster[c(4,3,2,1)],"#65ae0f",cols_cluster[7],"grey40")
 ```
 
 ```{r clus dev sd 5 rank sd 6}
-#| output: false
+#| warning: false
 c1 <- lapply(seq_along(spe_list), function(x) {
   plotSpots(spe_list[[x]], annotate="clust_k7_svg.nobias.notloop.dev5.rank6_layers", point_size=.3)+
     scale_color_manual(values=cols_7)+
     labs(title=names(spe_list)[[x]])+
     theme(legend.position="none")
 })
-g1 = do.call(grid.arrange, c(c1[c(24,19,1,10)], ncol=4, newpage=F))
 ```
 
+Our method proved successful and our goal was achieved; removing biased SVGs enabled the distinction of L5 and L6.
+
+*Figure 4.12 PRECAST clusters: 2080 input features (SVGs minus 18 biased), K=7*
+
 ```{r view clusters sd5 sd6}
-#| fig-height: 4
+#| fig-height: 2
 #| fig-width: 7
-lay.mat = matrix(c(1,1,1,1,2), nrow=1)
-grid.arrange(g1, cols_7_legend(), layout_matrix=lay.mat, top="PRECAST clusters: 2080 input features (SVGs minus 18 biased), K=7")
+grid.arrange(c1[[24]],c1[[19]],c1[[1]],c1[[10]], cols_7_legend(), ncol=5)
 ```
 
 ```{r clus dev sd 5 rank sd 5}
-#| output: false
+#| warning: false
 c2 <- lapply(seq_along(spe_list), function(x) {
   plotSpots(spe_list[[x]], annotate="clust_k7_svg.nobias.notloop.dev5.rank5_layers", point_size=.3)+
     scale_color_manual(values=cols_7_other)+
     labs(title=names(spe_list)[[x]])+
     theme(legend.position="none")
 })
-g2 = do.call(grid.arrange, c(c2[c(24,19,1,10)], ncol=4, newpage=F))
 ```
 
-The exclusion of an additional 3 genes that would have occurred with the nSD(rank)\>=5 threshold had a surprisingly large impact on cluster results (losing the L5 and L6 distinction in favor for a small, noisy cluster most closely linked with L1).
+The exclusion of an additional 3 genes (CLDN11, PLPP3, MT1M) that would have occurred with the nSD(rank)\>=5 threshold had a surprisingly large impact on cluster results (losing the L5 and L6 distinction in favor for a small, noisy cluster most closely linked with L1).
+
+*Figure 4.13 PRECAST clusters: 2077 input features (SVGs minus 21 biased), K=7*
 
 ```{r view clusters sd5 sd5}
-#| fig-height: 4
+#| fig-height: 2
 #| fig-width: 7
-grid.arrange(g2, cols_7o_legend(), layout_matrix=lay.mat, top="PRECAST clusters: 2077 input features (SVGs minus 21 biased), K=7")
+grid.arrange(c2[[24]],c2[[19]],c2[[1]],c2[[10]], cols_7o_legend(), ncol=5)
 ```

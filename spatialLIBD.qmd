@@ -1,5 +1,5 @@
 ---
-title: "Rationale with spatialLIBD"
+title: "Exploration with spatialLIBD"
 format: 
   html:
     toc: true
@@ -63,17 +63,18 @@ mv$rank = (nrow(mv)+1)-rank(mv$bio)
 top_hvgs <- getTopHVGs(mv, n = 3000)
 ```
 
-The second approach from [scry](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1861-6) fits a model to raw counts matrix and assumes that genes with no biologically meaningful expression pattern will fit a binomial distribution. The greater the per-gene deviance from this null model, the more likely the expression of said gene is biologically meaningful as a top feature. We refer to this method as the **binomial deviance model**.
+The second approach from [scry](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1861-6) fits a model to the raw counts matrix and assumes that genes with no biologically meaningful expression pattern will fit a binomial distribution. The greater the per-gene deviance from this null model, the more likely the expression of said gene is biologically meaningful as a top feature. We refer to this method as the **binomial deviance model**.
 
 ```{r dev model}
 #| echo: true
-bd <- devianceFeatureSelection(spe, fam="binomial")
+bd <- devianceFeatureSelection(counts(spe), fam="binomial")
 ```
 
 ```{r dev model rank}
-bd.df = cbind.data.frame("gene"=rownames(bd),"gene_name"=rowData(bd)$gene_name,
-        "dev"= rowData(bd)$binomial_deviance,
-        "rank"=(nrow(bd)+1)-rank(rowData(bd)$binomial_deviance))
+bd.df = cbind.data.frame("gene"=names(bd),
+                         "gene_name"=rowData(spe)[names(bd),"gene_name"],
+                         "dev"= bd,
+                         "rank"=(length(bd)+1)-rank(bd))
 rownames(bd.df) = bd.df$gene
 ```
 
@@ -115,7 +116,7 @@ dev1 <- ggplot(bd.df, aes(x=rank, y=dev, color=is_svg))+
 
 We found that the mean-variance model ranked a considerable portion of the SVGs as some of the lowest features in the dataset. In contrast, all the SVGs were ranked highly with the binomial deviance model.
 
-*Figure 1. Bionomial deviance model better corresponds to nnSVG results*
+*Figure 2.1 Bionomial deviance model better corresponds to nnSVG results*
 
 ```{r view models}
 #| fig-height: 3
@@ -194,7 +195,7 @@ dev2 <- ggplot(bd.lm.df, aes(x=domain_simple, fill=domain_simple))+
 
 These results further supported the selection of the binomial deviance model, as the 3000 most highly ranked features represented significant markers for all DLPFC cortical layers. In contrast, the 3000 most highly ranked features from the mean-variance model were overwhelmingly L1 and white matter (WM) markers.
 
-*Figure 2. Binomial deviance model better corresponds to known DLPFC layer markers*
+*Figure 2.2 Binomial deviance model better corresponds to known DLPFC layer markers*
 
 ```{r view top genes as lm}
 #| fig-height: 3
@@ -208,14 +209,15 @@ Having picked a feature selection method, next we compared the per-gene ranks an
 
 ```{r dev model batch}
 #| echo: true
-bd.batch <- devianceFeatureSelection(spe, fam="binomial", 
+bd.batch <- devianceFeatureSelection(counts(spe), fam="binomial", 
                                      batch=as.factor(spe$subject))
 ```
 
 ```{r dev model batch rank}
-bd.batch.df = cbind.data.frame("gene"=rownames(bd.batch),"gene_name"=rowData(bd.batch)$gene_name,
-        "dev"= rowData(bd.batch)$binomial_deviance,
-        "rank"=(nrow(bd.batch)+1)-rank(rowData(bd.batch)$binomial_deviance))
+bd.batch.df = cbind.data.frame("gene"=rownames(spe),
+                               "gene_name"=rowData(spe)$gene_name,
+                               "dev"= bd.batch,
+                               "rank"=(length(bd.batch)+1)-rank(bd.batch))
 rownames(bd.batch.df) = bd.batch.df$gene
 bd.batch.df$is_svg = factor(bd.batch.df$gene %in% libd.svgs$gene_id, 
                       levels=c(TRUE,FALSE), labels=c("SVGs","not SVGs"))
@@ -230,9 +232,9 @@ dev3 <- ggplot(bd.batch.df, aes(x=rank, y=dev, color=is_svg))+
                    axis.text.y=element_text(size=6))
 ```
 
-At a first glance, including a subject-batch effect doesn’t dramatically change the rank of the SVGs. This finding suggests that `scry::devianceFeatureSelection` could be a good alternative to `nnSVG` feature selection if there is considerable technical variation in the experiment/ dataset. It can also be run much faster.
+Including a subject-batch effect doesn’t dramatically change the rank of the SVGs.
 
-*Figure 3. SVGs are consistently highly ranked in binomial deviance model with and without batch*
+*Figure 2.3 SVGs are consistently highly ranked in binomial deviance model with and without batch*
 
 ```{r view dev models svgs}
 #| fig-height: 3
@@ -241,20 +243,24 @@ grid.arrange(addSmallLegend(dev1, textSize = 8)+ggtitle("batch = NULL"),
              addSmallLegend(dev3, textSize = 8), ncol=2)
 ```
 
+We see that \>90% of `spatialLIBD` SVGs are ranked in the top 3000 features by either binomial deviance model.
+
 ```{r}
 #| echo: true
-max(bd.df[libd.svgs$gene_id,"rank"])
-max(bd.batch.df[libd.svgs$gene_id,"rank"])
+quantile(bd.df[libd.svgs$gene_id,"rank"], probs=seq(0,1,.1))
+quantile(bd.batch.df[libd.svgs$gene_id,"rank"], probs=seq(0,1,.1))
 ```
+
+This suggests that `scry::devianceFeatureSelection` could be a good alternative to `nnSVG` feature selection if there is considerable technical variation in the experiment/ dataset. It can also be run much faster.
 
 ### Highly deviant genes
 
-Now we can examine the influence of `batch= subject` on the per-gene deviance values and ranks. Since we propose that using a binomial deviance model to select top features is a possible alternative to `nnSVG` feature selection we will first examine the top features as ranked based on the binomial deviance model.
+Now we can examine the influence of `batch= subject` on the per-gene deviance values and ranks. Since we propose that using a binomial deviance model to select top features is a possible alternative to `nnSVG` feature selection we will first examine the top features as ranked based on the binomial deviance model (rank\<=3000 in either model).
 
 ```{r join dev models}
 #| echo: true
 subject.df <- left_join(bd.df, bd.batch.df,
-                       by=c("gene", "gene_name"),
+                       by=c("gene", "gene_name","is_svg"),
                        suffix=c("_default","_subject"))
 ```
 
@@ -284,10 +290,10 @@ delta1 <- ggplot(top.df, aes(x=dev_default, y=dev_subject, color=d.diff))+
   scale_color_viridis_c(option="F", direction=-1)+
   geom_abline(aes(slope=1, intercept=0), lty=2)+
   labs(x="deviance (no batch)", y="deviance (batch)", title="\u0394 deviance")+
-  theme_bw()+theme(legend.position="inside", legend.position.inside=c(.1,.8))+
-  theme(legend.title = element_text(size = 10), 
-              legend.text  = element_text(size = 10),
-              legend.key.size = unit(.6, "lines"))
+  theme_bw()+theme(legend.position="inside", legend.position.inside=c(.1,.8),
+                   legend.title = element_text(size = 10),
+                   legend.text  = element_text(size = 10),
+                   legend.key.size = unit(.6, "lines"))
 ```
 
 ```{r plot rank diff}
@@ -297,13 +303,13 @@ delta2 <- ggplot(top.df, aes(x=rank_default, y=rank_subject, color=r.diff))+
   scale_color_viridis_c(option="F", direction=-1)+
   geom_abline(aes(slope=-1, intercept=0), lty=2)+
   labs(x="rank (no batch)",y="rank (batch)", title="\u0394 rank")+
-  theme_bw()+theme(legend.position="inside", legend.position.inside=c(.8,.8))+
-  theme(legend.title = element_text(size = 10), 
-              legend.text  = element_text(size = 10),
-              legend.key.size = unit(.6, "lines"))
+  theme_bw()+theme(legend.position="inside", legend.position.inside=c(.8,.8),
+                   legend.title = element_text(size = 10), 
+                   legend.text  = element_text(size = 10),
+                   legend.key.size = unit(.6, "lines"))
 ```
 
-*Figure 4. Influence of batch on highly deviant genes (n= 3000)*
+*Figure 2.4 Influence of batch on highly deviant genes (n= 3000)*
 
 ```{r view diff plots}
 #| fig-height: 3.5
@@ -311,64 +317,7 @@ delta2 <- ggplot(top.df, aes(x=rank_default, y=rank_subject, color=r.diff))+
 grid.arrange(delta1, delta2, ncol=2)
 ```
 
-##### to do: 
-
-JACQUI YOU NEED TO SUMMARIZE THE ABOVE PLOTS HERE AND WRITE A TRANSITION TO THE NEXT PLOT
-
-```{r plot mito}
-#| output: false
-top.df$is_mito = top.df$gene_name %in% grep("^MT-", top.df$gene_name, value=T)
-top.df$is_biased = top.df$d.diff>1 | top.df$r.diff>500
-top.df$other = top.df$is_mito==F & top.df$is_biased==F & top.df$d.diff>.1
-top.df$group = factor(paste(top.df$is_mito, top.df$is_biased), 
-                      levels=c("FALSE FALSE","FALSE TRUE","TRUE FALSE"))
-
-mt <- ggplot(top.df, aes(x=r.diff, y=d.diff, color=group))+
-  geom_point()+
-  geom_text_repel(data= filter(top.df, d.diff>.21 | r.diff>500), 
-                  aes(label=gene_name), size=3)+
-  ggbreak::scale_y_break(c(.5, 3), scales=.25, ticklabels=c(seq(0,.5,.1),3.0,3.1,3.2))+
-  scale_color_manual(values=c("grey40","black","red"))+
-  labs(x="\u0394 rank", y="\u0394 deviance", title="chrM in red; biased genes black")+
-  theme_bw()+theme(legend.position="none", title=element_text(size=10))
-```
-
-```{r check libd genes}
-#| output: false
-check.genes.names = c("MTRNR2L1","MTRNR2L8","RPS4Y1","RPS26","MT-ND3","MT3","MT-CO2","MT-CO1")
-check.genes = rownames(spe)[rowData(spe)$gene_name %in% check.genes.names]
-names(check.genes) = rowData(spe)[check.genes,"gene_name"]
-plot.df = dotplotDF(check.genes, spe, is_libd=TRUE, norm.to.mbp = F)
-```
-
-```{r plot dotplot}
-dp <- ggplot(plot.df, 
-       aes(x=brain, y=factor(ylabel, levels=c("MT-ND3","MT-CO2","MT-CO1",
-                                              "MT3","RPS26",
-                                              "RPS4Y1","MTRNR2L8","MTRNR2L1")), 
-           size=n, color=scaled_avg))+
-  geom_count()+
-  scale_color_gradientn(colors=c("#4575b4","grey90","#d73027"), 
-                        limits=c(min(plot.df$scaled_avg)-.1,
-                                 max(plot.df$scaled_avg)+.1),
-                        values=c(0,.5,1))+
-  scale_size(limits=c(0,1))+
-  facet_grid(cols=vars(slide), scales="free_x")+
-  labs(x="",y="",size="prop. spots",color="scaled expr\n(logcounts)")+
-  theme_bw()+theme(axis.text.x=element_text(angle=45, hjust=1, size=8),
-                   plot.margin=unit(c(1,0,0,0), units="cm"),
-                   strip.text=element_text(size=10))
-```
-
-We can see that the mitochondrial genome (red; often removed from feature lists) exhibits no change in rank but several genes show relatively strong change in deviance residuals with `batch= subject`. Considering that the mitochondrial genome is often excluded, there are two additional features that may be biased (RPS26, MT3). Examining a dotplot of the scaled expression of these potentially subject-biased genes suggests that it is worth looking further into whether these features are worth including as input to a clustering algorithm.
-
-*Figure 5. Mitochondrial genome and potentially subject-biased genes*
-
-```{r view mt dotplot}
-#| fig-height: 3.5
-#| fig-width: 7
-grid.arrange(print(mt), dp, layout_matrix=matrix(c(1,1,2,2,2),, nrow=1))
-```
+Our approach suggests that when batch is included in the binomial deviance model, some highly ranked features still show signs of having reductions in deviance that was previously attributed to biological variation. One of these features is RPS4Y1, which is located on the Y chromosome and therefore ought to exhibit substantial between-subject differences based on sex.
 
 ### Spatially variable genes
 
@@ -382,31 +331,33 @@ top.svg.df = filter(subject.df, gene %in% libd.svgs$gene_id)
 ```{r plot svgs ddiff}
 delta3 <- ggplot(top.svg.df, aes(x=dev_default, y=dev_subject, color=d.diff))+
   geom_point()+
-  geom_text_repel(data=filter(top.svg.df, d.diff>1),# & is_svg=="SVGs"), 
-                  aes(label=gene_name), color="black")+
+  geom_text_repel(data=filter(top.svg.df, d.diff>1), aes(label=gene_name))+
   scale_x_log10()+scale_y_log10()+
   scale_color_viridis_c(option="F", direction=-1)+
   geom_abline(aes(slope=1, intercept=0), lty=2)+
   labs(x="deviance (no batch)", y="deviance (batch)", title="\u0394 deviance")+
-  theme_bw()+
-  theme(legend.position="none")
+  theme_bw()+theme(legend.position="inside", legend.position.inside=c(.15,.8),
+                   legend.title = element_text(size = 10),
+                   legend.text  = element_text(size = 10),
+                   legend.key.size = unit(.6, "lines"))
 ```
 
 ```{r plot svgs rdiff}
 delta4 <- ggplot(top.svg.df, aes(x=rank_default, y=rank_subject, color=r.diff))+
   geom_point()+scale_y_reverse()+xlim(0,6000)+
-  geom_text_repel(data=filter(top.svg.df, r.diff>1000),# & is_svg=="SVGs"), 
-                  aes(label=gene_name), color="black")+
+  geom_text_repel(data=filter(top.svg.df, r.diff>1000), aes(label=gene_name))+
   scale_color_viridis_c(option="F", direction=-1)+
   geom_abline(aes(slope=-1, intercept=0), lty=2)+
   labs(x="rank (no batch)",y="rank (batch)", title="\u0394 rank")+
-  theme_bw()+
-  theme(legend.position="none")
+  theme_bw()+theme(legend.position="inside", legend.position.inside=c(.85,.8),
+                   legend.title = element_text(size = 10), 
+                   legend.text  = element_text(size = 10),
+                   legend.key.size = unit(.6, "lines"))
 ```
 
 Our approach indicates that the two genes with the strongest potential to exhibit subject-biased expression patterns in a way that confounds biological variation are also SVGs (MTRNR2L1, MTRNR2L8). In addition we identify Xist as subject-biased. Xist is a lncRNA that is robustly expressed in females due to its importance for X inactivation. The identification of Xist as a subject-biased gene indicates that our approach works as intended (picking up features with non-spatially relevant sources of variation).
 
-*Figure 6. Influence of batch on SVGs (n= 2098)*
+*Figure 2.5 Influence of batch on SVGs (n= 1967)*
 
 ```{r view svgs diff}
 #| fig-height: 3.5
@@ -414,9 +365,58 @@ Our approach indicates that the two genes with the strongest potential to exhibi
 grid.arrange(delta3, delta4, ncol=2)
 ```
 
-## Spatial expression plots confirm bias
+```{r}
+svg <- ggplot(top.svg.df, aes(x=r.diff, y=d.diff))+
+  geom_point()+
+  geom_point(data=filter(top.svg.df, gene_name %in% c("MTRNR2L1","MTRNR2L8","XIST")), color="red2")+
+  geom_point(data=filter(top.svg.df, gene_name %in% 
+                           grep("MT-", top.svg.df$gene_name, value=T)), 
+             color="grey")+
+  geom_text_repel(data= filter(top.svg.df, gene_name=="MT3"), 
+                  aes(label=gene_name), size=3)+
+    geom_text_repel(data=filter(top.svg.df, gene_name %in% 
+                                  c("MTRNR2L1","MTRNR2L8","XIST")),
+                    aes(label=gene_name), size=3, color="red")+
+  ggbreak::scale_y_break(c(.5, 3), scales=.25, ticklabels=c(seq(0,.5,.1),3.0,3.1,3.2))+
+  #scale_color_manual(values=c("grey40","red3","black"))+
+  labs(x="\u0394 rank", y="\u0394 deviance", title="SVGs (n=1967)")+
+  theme_bw()+theme(legend.position="none", title=element_text(size=10))
+```
 
-Our approach suggests that even when batch correction is performed, there can still be some highly ranked genes that exhibit the potential for strong subject-bias. Further, three of these potentially biased features are SVGs. To confirm a strong influence of subject/ brain donor for these genes we looked at the spatial expression plots.
+```{r}
+top <- ggplot(top.df, aes(x=r.diff, y=d.diff))+
+  geom_point()+
+  geom_point(data=filter(top.df, gene_name %in% c("MTRNR2L1","MTRNR2L8","RPS4Y1")), color="red2")+
+  geom_point(data=filter(top.df, gene_name %in% 
+                           grep("MT-", top.df$gene_name, value=T)), 
+             color="grey")+
+  geom_text_repel(data= filter(top.df, gene_name %in% c("MT3","RPS26")), 
+                  aes(label=gene_name), size=3)+
+  geom_text_repel(data= filter(top.df, gene_name %in% 
+                                 c("MTRNR2L1","MTRNR2L8","RPS4Y1")), 
+                  aes(label=gene_name), size=3, color="red")+
+  ggbreak::scale_y_break(c(.5, 3), scales=.25, ticklabels=c(seq(0,.5,.1),3.0,3.1,3.2))+
+  #scale_color_manual(values=c("grey40","red3","black"))+
+  labs(x="\u0394 rank", y="\u0394 deviance", title="Top deviance (n=3000)")+
+  theme_bw()+theme(legend.position="none", title=element_text(size=10))
+```
+
+## Spatial expression plots to confirm bias
+
+Our approach suggests that even when batch correction is performed, there can still be some highly ranked genes that exhibit the potential for strong subject-bias. Further, three of these potentially biased features are SVGs.
+
+Plotting the rank difference and relative change in deviance together shows that the mitochondrial genome (grey) has a distinct pattern on no change in rank and many chrM genes have relatively high change in deviance compared to non-biased genes. If we remove the chrM genes (as is often done in feature selection), this leaves two additional features that are outliers from the rest of the top features or SVGs (RPS26 and MT3).
+
+*Figure 2.6 Mitochondrial genome and potential additional biased genes*
+
+```{r}
+#| fig-height: 3.5
+#| fig-width: 7
+grid.arrange(print(top), print(svg), ncol=2, 
+             bottom="biased genes (red), chrM (grey)")
+```
+
+To confirm a strong influence of subject/ brain donor for potentially biased genes we looked at the spatial expression plots.
 
 We first examine XIST (spatially variable) and RPS4Y1 (highly deviant), given that both genes are located on sex chromosomes and therefore ought to exhibit strong differences in expression between subjects.
 
@@ -432,12 +432,12 @@ spe$sample_id = paste(spe$subject, spe$tissue)
 xist <- plotSpots(spe, annotate="ENSG00000229807", assay="logcounts", 
           sample_id="sample_id", point_size=.1)+ggtitle("XIST")+
   scale_color_gradient(low='grey90', high='black')
-rpsy <- plotSpots(spe, annotate=check.genes['RPS4Y1'], assay="logcounts", 
+rpsy <- plotSpots(spe, annotate="ENSG00000129824", assay="logcounts", 
           sample_id="sample_id", point_size=.1)+ggtitle("RPS4Y1")+
   scale_color_gradient(low='grey90', high='black')
 ```
 
-*Figure 7. Sex-linked genes exhibit strong subject bias*
+*Figure 2.7 Sex-linked genes exhibit strong subject bias*
 
 ```{r}
 #| fig-height: 6
@@ -445,7 +445,7 @@ rpsy <- plotSpots(spe, annotate=check.genes['RPS4Y1'], assay="logcounts",
 grid.arrange(xist, rpsy, ncol=2)
 ```
 
-The two remaining highly deviant SVGs with potential subject bias, MTRNR2L1 and MTRNR2L8, are lncRNAs with an unknown biological function. These features likewise display strong subject-biased expression and are also clearly enriched in certain spatial domains. MTRNR2L1 and MTRNR2L8 are perfect examples of features that may introduce noise if included in spatial domain clustering.
+The two remaining features with potential subject bias (MTRNR2L1 and MTRNR2L8) are both highly deviant and spatially variable. These lncRNAs have an unknown biological function. Spatial expression plots illustrate that these features display strong subject-biased expression and are also clearly enriched in certain spatial domains. MTRNR2L1 and MTRNR2L8 are perfect examples of features that may introduce noise if included in spatial domain clustering.
 
 ```{r mtrmr spatial plot}
 #| output: false
@@ -457,7 +457,7 @@ ml8 <- plotSpots(spe, annotate="ENSG00000255823", assay="logcounts",
   scale_color_gradient(low='grey90', high='black')
 ```
 
-*Figure 8. Successful identification subject-biased, spatially variable genes*
+*Figure 2.8 Successful identification subject-biased, spatially variable genes*
 
 ```{r view mtrnr plot}
 #| fig-height: 6
@@ -467,17 +467,17 @@ grid.arrange(ml1, ml8, ncol=2)
 
 ```{r additional plots}
 #| output: false
-rps26 <- plotSpots(spe, annotate=check.genes['RPS26'], assay="logcounts", 
+rps26 <- plotSpots(spe, annotate="ENSG00000197728", assay="logcounts", 
           sample_id="sample_id", point_size=.1)+ggtitle("RPS26")+
   scale_color_gradient(low='grey90', high='black')
-mt3 <- plotSpots(spe, annotate=check.genes['MT3'], assay="logcounts", 
+mt3 <- plotSpots(spe, annotate="ENSG00000087250", assay="logcounts", 
           sample_id="sample_id", point_size=.1)+ggtitle("MT3")+
   scale_color_gradient(low='grey90', high='black')
 ```
 
 Lastly, RPS26 and MT3 do not display such strong subject-specific expression. This indicates that our original thresholds chosen without consideration of the location of features from the mitochondrial genome was most appropriate.
 
-*Figure 9. RPS26 and MT3 should not be excluded due to bias*
+*Figure 2.9 RPS26 and MT3 should not be excluded due to bias*
 
 ```{r view additional plots}
 #| fig-height: 6

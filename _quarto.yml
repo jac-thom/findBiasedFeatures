@@ -11,6 +11,7 @@ book:
     - spatialLIBD.qmd
     - mbv_slide.qmd
     - mbv_subject.qmd
+    - to_explore.qmd
 
 format:
   html:

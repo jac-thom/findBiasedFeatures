@@ -116,7 +116,7 @@ ul.task-list li input[type="checkbox"] {
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./spatialLIBD.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Rationale with spatialLIBD</span></span></a>
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Exploration with spatialLIBD</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -129,6 +129,12 @@ ul.task-list li input[type="checkbox"] {
   <div class="sidebar-item-container"> 
   <a href="./mbv_subject.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">MBv: batch = subject</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./to_explore.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Things to look into further</span></span></a>
   </div>
 </li>
     </ul>
@@ -185,11 +191,12 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
+<p>Link to <a href="https://github.com/jac-thom/findBiasedFeatures">github repo</a>.</p>
 <section id="background" class="level1" data-number="1">
 <h1 data-number="1"><span class="header-section-number">1</span> Background</h1>
 <section id="the-importance-of-feature-selection" class="level2" data-number="1.1">
 <h2 data-number="1.1" class="anchored" data-anchor-id="the-importance-of-feature-selection"><span class="header-section-number">1.1</span> The importance of feature selection</h2>
-<p>A crucial step in single cell and single nucleus RNAseq analysis pipelines is the use of clustering algorithms generate groups of cells/nuclei with similar gene expression patterns. These clusters are often necessary to classify observations (cells/nuclei) based on cell state (cell type, developmental stage, etc.) to unleash the potential of the single cell/ nucleus approach.</p>
+<p>A crucial step in single cell/nucleus RNAseq analysis is the implementation of clustering algorithms to generate groups of cells/nuclei with similar gene expression patterns. These clusters are often necessary to classify observations (cells/nuclei) based on cell state (cell type, developmental stage, etc.) to unleash the potential of the single cell/ nucleus approach.</p>
 <p>Clusters are generated based on patterns of expression of a subset of features, and the selection of these features is highly influential to the downstream results. When selecting features for dimension reduction and clustering, genes from the mitochondrial genome, known sex-linked genes, or cell cycle genes (depending on the dataset) are often removed from consideration. These “biological quality controls” can help produce clusters representing desired cell state by removing expression patterns linked to donor sex or cell size.</p>
 <p>Since canonical cell state marker genes will be highly expressed in one subset of observations and lowly expressed or absent in all others, common feature selection methods identify genes with highly variable expression within the dataset. Such methods often rely on modeling the mean-variance relationship and allow for the consideration of potential batch effects in these models. Batch consideration enables data-driven exclusion of features that capture technical noise or biological differences not relevant to the classification of cell state.</p>
 </section>
@@ -201,9 +208,9 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="the-problem" class="level2" data-number="1.3">
 <h2 data-number="1.3" class="anchored" data-anchor-id="the-problem"><span class="header-section-number">1.3</span> The problem</h2>
-<p>While analyzing a 10X Visium SRT dataset from the human DLPFC, we recognized the need to evaluate our SVGs for the potential influence of batch effects in order to optimize spatial domain clustering</p>
+<p>While analyzing a 10X Visium SRT dataset from the human DLPFC, we recognized the need to evaluate our SVGs for the potential influence of batch effects in order to optimize spatial domain clustering.</p>
 <p>We used <a href="https://www.nature.com/articles/s41467-023-39748-z">nnSVG</a> to select 2098 statistically significant SVGs and then used <a href="https://www.nature.com/articles/s41467-023-35947-w">PRECAST</a> to identify clusters that hopefully strongly corresponded to the cortical layers in the DLPFC. Using K=7 or K=8, we were unable to distinguish L5 from L6 with this set of features. We also identified a cluster of observations that appeared to be driven by low UMI count rather than expression of SVGs.</p>
-<p><em>Figure 1. PRECAST clusters: 2098 input features (SVGs), K=7</em></p>
+<p><em>Figure 1.1 PRECAST clusters: 2098 input features (SVGs), K=7</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -213,7 +220,7 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </div>
-<p><em>Figure 2. PRECAST clusters: 2098 input features (SVGs), K=8</em></p>
+<p><em>Figure 1.2 PRECAST clusters: 2098 input features (SVGs), K=8</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -224,7 +231,7 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 <p>The lack of distinction between L5 and L6 did not appear to be due under-representation of known gene markers for these cortical layers in the SVG set. (DLPFC layer markers pulled from <a href="https://www.science.org/doi/abs/10.1126/science.adh1938">Huuki-Meyers et. al, 2024</a> Table S8.)</p>
-<p><em>Figure 3. The SVG set comprises known marker genes for all DLPFC layers.</em></p>
+<p><em>Figure 1.3 The SVG set comprises known marker genes for all DLPFC layers.</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -235,7 +242,7 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 <p>Nevertheless, we supplemented the SVG set with the most significant markers for each cortical layer (top 100 lowest FDR for each layer), adding 327 features to the input for clustering. We found that the number of L5 and L6 markers increased mildly, indicating that the most striking L5 and L6 markers were already included in the SVG list.</p>
-<p><em>Figure 4. Adding the most significant marker genes marginally increases the SVG set.</em></p>
+<p><em>Figure 1.4 Adding the most significant marker genes marginally increases the SVG set.</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -246,7 +253,7 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 <p>Supplementing the SVGs with additional layer markers did not improve spatial domain clustering with PRECAST at K=7 or K=8.</p>
-<p><em>Figure 5. PRECAST clusters: 2425 input features (SVGs + layer markers), K=7</em></p>
+<p><em>Figure 1.5 PRECAST clusters: 2425 input features (SVGs + layer markers), K=7</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -256,7 +263,7 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </div>
-<p><em>Figure 6. PRECAST clusters: 2425 input features (SVGs + layer markers), K=8</em></p>
+<p><em>Figure 1.6 PRECAST clusters: 2425 input features (SVGs + layer markers), K=8</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -266,11 +273,11 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </div>
-<p>This led us to hypothesize that a small number of features within the SVG list were capturing technical variation in gene expression that that these “noisy” features were more prominent in some samples vs others.</p>
+<p>This led us to hypothesize that a small number of features within the SVG list were capturing technical variation in gene expression.</p>
 </section>
 <section id="the-goal" class="level2" data-number="1.4">
 <h2 data-number="1.4" class="anchored" data-anchor-id="the-goal"><span class="header-section-number">1.4</span> The goal</h2>
-<p>Our goal is to use feature selection methods designed for single cell/nuclei RNAseq that can account for batch effects to characterize SVGs. By examining the per-gene variance and rank with and without a batch effect, we aim to identify features that could be driving these effects. Removing these SVGs from the feature set may improve how the resulting clusters correspond to known DLPFC spatial domains.</p>
+<p>Our goal is to use feature selection methods that can account for batch effects to flag SVGs that may be strongly influenced by technical factors. By examining the per-gene variance/deviance with and without a batch effect, we aim to identify features that could be interfering with the generation of clusters that correspond to known DLPFC spatial domains.</p>
 
 
 </section>
@@ -695,8 +702,8 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   <div class="nav-page nav-page-previous">
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./spatialLIBD.html" class="pagination-link" aria-label="Rationale with spatialLIBD">
-        <span class="nav-page-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Rationale with spatialLIBD</span></span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./spatialLIBD.html" class="pagination-link" aria-label="Exploration with spatialLIBD">
+        <span class="nav-page-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Exploration with spatialLIBD</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

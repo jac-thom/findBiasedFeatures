@@ -149,7 +149,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./spatialLIBD.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Rationale with spatialLIBD</span></span></a>
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Exploration with spatialLIBD</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -164,6 +164,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">MBv: batch = subject</span></span></a>
   </div>
 </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./to_explore.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Things to look into further</span></span></a>
+  </div>
+</li>
     </ul>
     </div>
 </nav>
@@ -176,9 +182,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#intro-to-mbv-project" id="toc-intro-to-mbv-project" class="nav-link active" data-scroll-target="#intro-to-mbv-project"><span class="header-section-number">3.1</span> Intro to MBv project</a></li>
   <li><a href="#binomial-model-deviance-residuals" id="toc-binomial-model-deviance-residuals" class="nav-link" data-scroll-target="#binomial-model-deviance-residuals"><span class="header-section-number">3.2</span> Binomial model deviance residuals</a></li>
-  <li><a href="#examine-expression-with-dotplot" id="toc-examine-expression-with-dotplot" class="nav-link" data-scroll-target="#examine-expression-with-dotplot"><span class="header-section-number">3.3</span> Examine expression with dotplot</a></li>
+  <li><a href="#examining-potentially-biased-expression-patterns-with-a-dotplot" id="toc-examining-potentially-biased-expression-patterns-with-a-dotplot" class="nav-link" data-scroll-target="#examining-potentially-biased-expression-patterns-with-a-dotplot"><span class="header-section-number">3.3</span> Examining potentially biased expression patterns with a dotplot</a></li>
   <li><a href="#spatial-expression-plots" id="toc-spatial-expression-plots" class="nav-link" data-scroll-target="#spatial-expression-plots"><span class="header-section-number">3.4</span> Spatial expression plots</a></li>
-  <li><a href="#sample-specific-bias" id="toc-sample-specific-bias" class="nav-link" data-scroll-target="#sample-specific-bias"><span class="header-section-number">3.5</span> Sample-specific bias?</a></li>
+  <li><a href="#sample-specific-bias" id="toc-sample-specific-bias" class="nav-link" data-scroll-target="#sample-specific-bias"><span class="header-section-number">3.5</span> Sample-specific bias?</a>
+  <ul class="collapse">
+  <li><a href="#do-wm-spots-account-for-expression-of-some-subject-biased-genes" id="toc-do-wm-spots-account-for-expression-of-some-subject-biased-genes" class="nav-link" data-scroll-target="#do-wm-spots-account-for-expression-of-some-subject-biased-genes"><span class="header-section-number">3.5.1</span> Do WM spots account for expression of some subject-biased genes?</a></li>
+  <li><a href="#moving-forwards" id="toc-moving-forwards" class="nav-link" data-scroll-target="#moving-forwards"><span class="header-section-number">3.5.2</span> Moving forwards</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -204,27 +214,67 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>Having established the ability of the approach with a sample dataset, we now switch gears to look at our own data.</p>
 <section id="intro-to-mbv-project" class="level2" data-number="3.1">
 <h2 data-number="3.1" class="anchored" data-anchor-id="intro-to-mbv-project"><span class="header-section-number">3.1</span> Intro to MBv project</h2>
-<section id="goal-of-this-analysis" class="level4" data-number="3.1.0.1">
-<h4 data-number="3.1.0.1" class="anchored" data-anchor-id="goal-of-this-analysis"><span class="header-section-number">3.1.0.1</span> Goal of this analysis</h4>
-<p>As established in the Intro[LINK CHAPTER], the goal of this analysis is to perform feature-based QC to remove features contributing to non-spatially meaningful biological variation from our list of spatially variable genes (SVGs).</p>
-<p>As we showed in the spatialLIBD example, using <code>nnSVG</code> or <code>scry::devianceFeatureSelection</code> produced feature lists that represented the spectrum of layer-specific markers in the DLPFC (FIGURE). Further, SVGs were the most highly ranked features based on deviance (FIGURE), when all genes were input to the model.</p>
-<p>Because of this, we decided to run <code>devianceFeatureSelection</code> on only the SVGs.</p>
+<p>Having established the ability of the approach with a sample dataset, we now switch gears to look at our own data (MBv dataset).</p>
+<section id="experimental-design" class="level4 unnumbered">
+<h4 class="unnumbered anchored" data-anchor-id="experimental-design">Experimental design</h4>
+<p>Our 10X Visium RNAseq dataset was generated from a single sequencing run and contains 24 human DLPFC samples. This is the first portion of a final dataset that will contain 120 samples, so with this subset it is imperative that we learn how to optimize our analysis pipeline.</p>
+<p>Each of the 24 samples was collected from a single brain donor/ subject.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">unique</span>(spe<span class="sc">$</span>brain))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 24</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">unique</span>(spe<span class="sc">$</span>sample_id))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 24</code></pre>
+</div>
+</div>
+<p>The samples are organized 4 per slide (6 total slides) with 2 male and 2 female samples per slide.</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>   slide
+sex V13F27-338 V13F27-348 V13Y10-020 V13Y10-021 V13Y10-022 V13Y10-023
+  F          2          2          2          2          2          2
+  M          2          2          2          2          2          2</code></pre>
+</div>
+</div>
+<p>The first batch effect we sought to investigate in the MBv dataset is <code>batch= slide</code>.</p>
 </section>
-<section id="experimental-design" class="level4" data-number="3.1.0.2">
-<h4 data-number="3.1.0.2" class="anchored" data-anchor-id="experimental-design"><span class="header-section-number">3.1.0.2</span> Experimental design</h4>
-<p>24 human DLPFC samples, 1 sample per subject/ brain donor, 4 samples per slide (6 slides), 2 M 2 F each slide</p>
-<p>We first investigated a slide effect.</p>
+<section id="goal-of-this-analysis" class="level4 unnumbered">
+<h4 class="unnumbered anchored" data-anchor-id="goal-of-this-analysis">Goal of this analysis</h4>
+<p>The goal of this analysis is to perform feature-based QC to remove features contributing to non-spatially meaningful biological variation from our list of spatially variable genes (SVGs).</p>
+<p>As we showed in the background chapter, using <code>nnSVG</code> for feature selection in the MBv data produced a list of features that represent the spectrum of layer-specific markers in the DLPFC (Figure 1.3). We then demonstrated with the <code>spatialLIBD</code> dataset that SVGs were highly ranked by <code>scry::devianceFeatureSelection</code>.</p>
+<p>When we performed the binomial deviance models on the MBv dataset (all features, n=36601), we found that the SVGs were even more highly ranked after inclusion of a <code>batch= slide</code>.</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>Summary of SVG rank:</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    2.0   537.2  1074.5  1103.5  1633.5  2929.0 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>Summary of SVG rank (batch= slide):</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    1.0   537.2  1073.5  1104.2  1632.8  3151.0 </code></pre>
+</div>
+</div>
+<p>Given the high rank of SVGs in the binomial deviance models and the substantial processing time required to run the model on all features, we decided to run <code>devianceFeatureSelection</code> on only the SVGs.</p>
 </section>
 </section>
 <section id="binomial-model-deviance-residuals" class="level2" data-number="3.2">
 <h2 data-number="3.2" class="anchored" data-anchor-id="binomial-model-deviance-residuals"><span class="header-section-number">3.2</span> Binomial model deviance residuals</h2>
-<p>Based on</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>slide.df <span class="ot">=</span> <span class="fu">read.csv</span>(<span class="st">"processed-data/bindev_default-slide_svgs-only.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">#read in the results of both models</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>slide.df <span class="ot">=</span> <span class="fu">read.csv</span>(<span class="st">"processed-data/bindev_default-slide_svgs-only.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p><em>Figure 3.1 Results of binomial deviance model performed on SVGs only (n= 2098 features)</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -234,58 +284,60 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
+<p>To isolate the influence of <code>batch= slide</code> we calculated the relative change in deviance and the difference in rank as established with the <code>spatialLIBD</code> dataset.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">#care about loss of deviance</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>slide.df<span class="sc">$</span>d.diff <span class="ot">=</span> (slide.df[,<span class="st">"dev_default"</span>]<span class="sc">-</span>slide.df[,<span class="st">"dev_slide"</span>])<span class="sc">/</span>slide.df<span class="sc">$</span>dev_slide</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># care about increase in rank</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>slide.df<span class="sc">$</span>r.diff <span class="ot">=</span> slide.df[,<span class="st">"rank_slide"</span>]<span class="sc">-</span>slide.df[,<span class="st">"rank_default"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">#care about loss of deviance</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>slide.df<span class="sc">$</span>d.diff <span class="ot">=</span> (slide.df<span class="sc">$</span>dev_default<span class="sc">-</span>slide.df<span class="sc">$</span>dev_slide)<span class="sc">/</span>slide.df<span class="sc">$</span>dev_slide</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co"># care about increase in rank</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>slide.df<span class="sc">$</span>r.diff <span class="ot">=</span> slide.df<span class="sc">$</span>rank_slide<span class="sc">-</span>slide.df<span class="sc">$</span>rank_default</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>These calculations distinguish several SVGs as potentially biased but altogether exhibited smaller magnitude changes compared to the subject effect in the <code>spatialLIBD</code> data (Figure 2.4).</p>
+<p><em>Figure 3.2 Difference in deviance and rank distinguish outliers (n= 2098)</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="mbv_slide_files/figure-html/view diff plots-1.png" class="img-fluid figure-img" width="864"></p>
+<p><img src="mbv_slide_files/figure-html/view diff plots-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
 </div>
 </section>
-<section id="examine-expression-with-dotplot" class="level2" data-number="3.3">
-<h2 data-number="3.3" class="anchored" data-anchor-id="examine-expression-with-dotplot"><span class="header-section-number">3.3</span> Examine expression with dotplot</h2>
+<section id="examining-potentially-biased-expression-patterns-with-a-dotplot" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="examining-potentially-biased-expression-patterns-with-a-dotplot"><span class="header-section-number">3.3</span> Examining potentially biased expression patterns with a dotplot</h2>
+<p>Even though the influence of <code>batch= slide</code> was more subtle than expected from the <code>spatialLIBD</code> data, our difference metrics still clealy distinguished a small number of potentially biased SVGs.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>biased.genes <span class="ot">=</span> <span class="fu">filter</span>(slide.df, r.diff<span class="sc">&gt;</span><span class="dv">300</span> <span class="sc">|</span> d.diff<span class="sc">&gt;</span>.<span class="dv">5</span>)<span class="sc">$</span>gene</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(biased.genes) <span class="ot">=</span> <span class="fu">rowData</span>(spe)[biased.genes,<span class="st">"gene_name"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>biased.genes <span class="ot">=</span> <span class="fu">filter</span>(slide.df, r.diff<span class="sc">&gt;</span><span class="dv">300</span> <span class="sc">|</span> d.diff<span class="sc">&gt;</span>.<span class="dv">5</span>)<span class="sc">$</span>gene</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(biased.genes) <span class="ot">=</span> <span class="fu">rowData</span>(spe)[biased.genes,<span class="st">"gene_name"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div class="cell">
-<div class="cell-output cell-output-stdout">
-<pre><code>norm.to.mbp=FALSE : avg expression values in logNormCounts</code></pre>
-</div>
-</div>
+<p>We found that of the seven total potentially slide-biased genes, only 2-3 (MTRNR2L12, AL627171.2, and maybe MTRNR2L8) displayed expression patterns indicative of slide-specific influence. For the remaining features (MTRNR2L1, SERPINA3, CHI3L1, C5orf63), although the average slide expression may indicate a slide batch effect, the dotplot suggests that individual samples drive these differences.</p>
+<p><em>Figure 3.3 Summary of potentially slide-biased genes</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="mbv_slide_files/figure-html/plot dotplot-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="mbv_slide_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="864"></p>
 </figure>
 </div>
 </div>
 </div>
-<p>Two or three features show clear patterns of slide-biased expression (MTRNR2L12, AL627171.2, and partially MTRNR2L8).</p>
-<p>For the remaining features (MTRNR2L1, SERPINA3, CHI3L1, C5orf63), although the average slide expression may indicate a slide batch effect, the dotplot suggests that individual samples drive these differences.</p>
 </section>
 <section id="spatial-expression-plots" class="level2" data-number="3.4">
 <h2 data-number="3.4" class="anchored" data-anchor-id="spatial-expression-plots"><span class="header-section-number">3.4</span> Spatial expression plots</h2>
-<p>Looking at the unscaled logNormCounts values in the context of the spatial dimension, we can confirm slide-biased expression of MTRNR2L12 and AL627171.2.</p>
+<p>To support the influence of slide on the expression of these potentially biased genes we looking at the unscaled logcount expression for each sample, reconstructing the initial 2D coordinates.</p>
+<p>These plots confirm the conclusions from the dotplot that MTRNR2L12 and AL627171.2 exhibit slide-biased expression with increased abundance in the first two slides. For these figures each row corresponds to a single slide, and the tissue samples are displayed in the order they are positioned on the slide.</p>
+<p><em>Figure 3.4 Identification two slide-biased SVGs in the MBv dataset</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="mbv_slide_files/figure-html/view mtrnr2l12 and al6 spatial-1.png" class="img-fluid figure-img" width="768"></p>
+<p><img src="mbv_slide_files/figure-html/view mtrnr2l12 and al6 spatial-1.png" class="img-fluid figure-img" width="864"></p>
 </figure>
 </div>
 </div>
 </div>
 <p>However, MTRNR2L8 clearly is most influenced by sample-specific variation rather than slide.</p>
+<p><em>Figure 3.5 MTRNR2L8 expression is augmented in a single subject</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -298,21 +350,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="sample-specific-bias" class="level2" data-number="3.5">
 <h2 data-number="3.5" class="anchored" data-anchor-id="sample-specific-bias"><span class="header-section-number">3.5</span> Sample-specific bias?</h2>
-<p>Our experimental design includes only 1 sample per subject, such that no two samples came from the same brain donor. Thus, batch effect of subject and sample are one and the same.</p>
-<p>As we established with the spatialLIBD example, there can be subject-specific non-biologically meaningful (for spatial clustering) variation in gene expression.</p>
-<p>However, the concern with examining sample-specific variation in gene expression with our dataset is that there are between-sample differences in tissue composition (the proportion of spots corresponding to the different spatial domains). It would be problematic it using deviance residuals to identify sample-biased features identified key layer markers that have different expression across samples due to change in number of spots-per-sample comprising the different cortical layers.</p>
-<p>Using the original raw SVG clustering outcome as a guide, we can see that Br5902 has a substantially higher proportion of WM spots than the other samples.</p>
+<p>As we established with the spatialLIBD example, there can be subject-specific expression patterns that have the potential to confound spatial domain clustering (Figure 2.6, Figure 2.8). Our experimental design includes only one sample per subject, such that no two samples came from the same brain donor. Thus, any batch effect of subject and sample are indistinguishable.</p>
+<p>The concern with examining sample-specific variation in gene expression within our dataset (and potentially any SRT dataset) is that the proportion of observations corresponding to the different spatial domains varies across samples. Despite considerable efforts to collect tissue sections that are representative of all DLPFC layers, there are between-sample (aka between-subject) differences in tissue composition.</p>
+<p>We used the original raw SVG clusters (K=7; Figure 1.1) as a rough guide to see how tissue composition changed across samples. We combined the two L1 clusters and removed the L5/6 cluster since the merging of two layers might skew some samples more than others. We can see that Br5902 has a substantially higher proportion of WM spots than the other samples.</p>
+<p><em>Figure 3.6 Most domains are evenly distributed across subjects, with one exception in WM</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="mbv_slide_files/figure-html/plot tissue comp-1.png" class="img-fluid figure-img" width="960"></p>
+<p><img src="mbv_slide_files/figure-html/plot tissue comp-1.png" class="img-fluid figure-img" width="768"></p>
 </figure>
 </div>
 </div>
 </div>
-<p>Notably, Br5902 appears to contribute to the identification of MTRNR2L1, SERPINA3, and CHI3L1 as subject/sample-biased (dotplot above).</p>
-<p>We observed that unlike standard WM markers (left), the expression of MTRNR2L1, SERPINA3, and CHI3L1 expression are relatively equal across different spatial domains, both within the apparent outlier Br5902 and in other slides/samples (right plot).</p>
+<section id="do-wm-spots-account-for-expression-of-some-subject-biased-genes" class="level3" data-number="3.5.1">
+<h3 data-number="3.5.1" class="anchored" data-anchor-id="do-wm-spots-account-for-expression-of-some-subject-biased-genes"><span class="header-section-number">3.5.1</span> Do WM spots account for expression of some subject-biased genes?</h3>
+<p>Our approach to identifying biased genes would be problematic/ ineffective if applying a <code>batch= subject</code> effect to the binomial deviance model identified key layer markers as subject-biased. Notably, the subject with an uncommonly high number of WM spots (Br5902) is also the subject that appears to contribute to the identification of MTRNR2L1, SERPINA3, and CHI3L1 as subject/sample-biased (Figure 3.3).</p>
+<p>To see if WM spots were likely to drive the bias in these 3 features, we compared the expression of known WM markers across rough spatial domains to the expression of MTRNR2L1, SERPINA3, and CHI3L1. If the potentially Br5902-biased features exhibited similar expression patterns across spatial domains as the known WM markers, then it is possible that tissue composition is responsible for the identification of these features as potentially biased.</p>
+<p><em>Figure 3.7 Expression of MTRNR2L1, SERPINA3, and CHI3L1 does not indicate an influence of tissue composition</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -322,37 +377,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<p>To confirm this, we again refer to the unscaled logNormCounts values with the spatial expression plots (showing only a subset of samples for simplicity).</p>
+<p>We observed that unlike standard WM markers (left), the expression of MTRNR2L1, SERPINA3, and CHI3L1 expression are relatively equal across different spatial domains (right), both for the apparent outlier Br5902 and in other slides/samples. This suggests that our approach to identifying biased features is not sensitive to differences in tissue composition.</p>
+<p>To confirm this, we again visualized the unscaled logcounts, juxtaposing MBP expression (denoting WM) with the potentially subject-biased genes. We display only the first two slides for ease of comparison.</p>
+<p><em>Figure 3.8 Confirmation that WM spots do not drive subject-bias of MTRNR2L1, SERPINA3, and CHI3L1</em></p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="mbv_slide_files/figure-html/view mtrnr2l1-1.png" class="img-fluid figure-img" width="384"></p>
+<p><img src="mbv_slide_files/figure-html/view mtrnr2l1-1.png" class="img-fluid figure-img" width="864"></p>
 </figure>
 </div>
 </div>
 </div>
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="mbv_slide_files/figure-html/view serpina3-1.png" class="img-fluid figure-img" width="384"></p>
-</figure>
-</div>
-</div>
-</div>
-<div class="cell">
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="mbv_slide_files/figure-html/view chi3l1-1.png" class="img-fluid figure-img" width="384"></p>
-</figure>
-</div>
-</div>
-</div>
-<p>These data indicate that it is worth exploring a subject batch effect in our data, though we must examine a potential influence of tissue composition before proceeding.</p>
+<p>We conclude that none of the potentially subject-biased genes flagged by the addition of <code>batch= slide</code> reflect meaningful differences in tissue composition.</p>
+</section>
+<section id="moving-forwards" class="level3" data-number="3.5.2">
+<h3 data-number="3.5.2" class="anchored" data-anchor-id="moving-forwards"><span class="header-section-number">3.5.2</span> Moving forwards</h3>
+<p>It is important to note that the 5 potentially subject-biased SVGs identified here were flagged when considering the influence of <code>batch= slide</code>. Next we will explore the impact of <code>batch= subject</code>, checking for a potential influence of tissue composition before proceeding.</p>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->
@@ -767,8 +811,8 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="./spatialLIBD.html" class="pagination-link" aria-label="Rationale with spatialLIBD">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Rationale with spatialLIBD</span></span>
+      <a href="./spatialLIBD.html" class="pagination-link" aria-label="Exploration with spatialLIBD">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Exploration with spatialLIBD</span></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">

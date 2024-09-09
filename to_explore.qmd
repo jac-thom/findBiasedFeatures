@@ -1,0 +1,533 @@
+---
+title: "Things to look into further"
+format: 
+  html:
+    toc: true
+    toc-depth: 4
+    link-external-newwindow: true
+echo: false
+editor: visual
+---
+
+## modelGeneVar vs poisson distribution
+
+```{r setup}
+#| output: false
+library(spatialLIBD)
+library(dplyr)
+library(ggplot2)
+library(scran)
+library(scry)
+library(gridExtra)
+library(ggrepel)
+library(ggbreak)
+library(ggspavis)
+source("code/helper_functions.r")
+```
+
+### poisson model not reproducible
+
+We observed that even with the same seed, the `scran::modelGeneVarByPoisson` function does not return identical variance results, leading to changes in rank that can be impactful when looking at HVGs.
+
+```{r set seed}
+#| echo: true
+set.seed(123)
+```
+
+```{r fake load svg}
+#| echo: true
+#| eval: false
+library(spatialLIBD)
+spe <- fetch_data(type = "spe")
+```
+
+```{r}
+#for whatever reason i can't actually pull the spatialLIBD dataset using ExperimentHub, but i can when i am logged in to jhpce so I just copied the dataset to my local drive
+spe <- readRDS("processed-data/spe_spatialLIBD_n12.rda")
+```
+
+The `modelGeneVar` function and `scry::devianceFeatureSelection` function both produce identical results with different runs.
+
+```{r}
+#| echo: true
+mv <- modelGeneVar(logcounts(spe))
+mv1 <- modelGeneVar(logcounts(spe))
+```
+
+```{r}
+mv$ensembl = rownames(mv)
+mv$rank = (nrow(mv)+1)-rank(mv$bio)
+mv1$ensembl = rownames(mv1)
+mv1$rank = (nrow(mv1)+1)-rank(mv1$bio)
+```
+
+```{r}
+#| echo: true
+bd <- devianceFeatureSelection(counts(spe), fam="binomial")
+bd1 <- devianceFeatureSelection(counts(spe), fam="binomial")
+```
+
+```{r}
+#| echo: true
+identical(mv[,"bio"], mv1[,"bio"])
+identical(bd, bd1)
+```
+
+The `modelGeneVarByPoisson` function does not.
+
+```{r}
+#| echo: true
+mvp <- modelGeneVarByPoisson(logcounts(spe))
+mvp1 <- modelGeneVarByPoisson(logcounts(spe))
+```
+
+```{r}
+mvp$ensembl = rownames(mvp)
+mvp$rank = (nrow(mvp)+1)-rank(mvp$bio)
+
+mvp1$ensembl = rownames(mvp1)
+mvp1$rank = (nrow(mvp1)+1)-rank(mvp1$bio)
+```
+
+```{r}
+#| echo: true
+identical(mvp[,"bio"], mvp1[,"bio"])
+```
+
+```{r}
+repro.mvp = left_join(as.data.frame(mvp[,c("ensembl","bio","rank")]),
+                     as.data.frame(mvp1[,c("ensembl","bio","rank")]),
+                     by="ensembl", suffix=c("_1","_2"))
+```
+
+```{r}
+p1 <- ggplot(repro.mvp, aes(x=abs(bio_1-bio_2)))+
+  geom_histogram(bins=30, fill="grey", color="black")+theme_bw()+
+  labs(x="abs. change in variance")+
+  theme(axis.text.x=element_text(angle=45, hjust=1))
+```
+
+```{r}
+p2 <- ggplot(repro.mvp, aes(rank_1, rank_2))+
+  geom_point(size=.5)+theme_bw()+
+  labs(x="rank (run 1)", y="rank (run 2)", title="all features")
+```
+
+```{r}
+p2.2 <- ggplot(filter(repro.mvp, rank_1<=3000 | rank_2<=3000), 
+               aes(rank_1, rank_2))+
+  geom_point(size=.5)+theme_bw()+
+  labs(x="rank (run 1)", y="rank (run 2)", title="Top 3k features")
+```
+
+*Figure S1. Minor changes in variance produced by different poisson model runs impact rank*
+
+```{r}
+#| fig-height: 2.5
+#| fig-width: 7
+grid.arrange(p1, p2, p2.2, ncol=3)
+```
+
+### difference due to batch effect
+
+#### modelGeneVar {.unnumbered}
+
+Using the `modelGeneVar` function, the difference in gene rank due to `batch= subject` does not identify possibly subject-biased genes.
+
+```{r}
+#| echo: true
+mv.batch <- modelGeneVar(logcounts(spe), block=as.factor(spe$subject))
+```
+
+```{r}
+mv.batch$ensembl = rownames(mv.batch)
+mv.batch$rank = (nrow(mv.batch)+1)-rank(mv.batch$bio)
+
+var.df = left_join(as.data.frame(mv[,
+                                    c("ensembl","mean","bio","rank")]),
+                   as.data.frame(mv.batch[,
+                                          c("ensembl","mean","bio","rank")]),
+                   by=c("ensembl"), suffix=c("_default","_subject")) #%>%
+  #filter(rank_default<=3000 | rank_subject<=3000)
+var.df$gene_name = rowData(spe)[var.df$ensembl,"gene_name"]
+```
+
+```{r}
+p3 <- ggplot(var.df, aes(x=rank_default, y=rank_subject))+
+  geom_point(size=.5)+
+  labs(x="rank (no batch)", y="rank (batch)", title="modelGeneVar")+
+  theme_bw()
+```
+
+```{r}
+top.var.df <- filter(var.df, rank_default<=3000 | rank_subject<=3000)
+p4 <- ggplot(top.var.df, aes(x=rank_default, y=rank_subject))+
+  geom_point(size=.5)+
+  geom_point(data=filter(top.var.df, rank_default>30000 | rank_subject>30000),
+             color="red", size=.5)+
+  geom_text(data=as.data.frame(list(x=c(8000,30000),
+                                    y=c(33000,5000),
+                                    label=c("group 1","group 2"))),
+            aes(x=x, y=y, label=label), fontface="italic", color="tomato")+
+  labs(x="rank (no batch)", y="rank (batch)", title="(top 3k features)")+
+  theme_bw()
+```
+
+*Figure S2. Comparison of feature rank with and without subject batch*
+
+```{r}
+#| fig-height: 3
+#| fig-width: 6
+grid.arrange(p3, p4, ncol=2)
+```
+
+Things to note: weird ties a 20k, massive spread (compare to Figure S8), two groups ranked highly with one model and not another.
+
+We looked at both group 1 and group 2 genes to see if they exhibit true subject-biased expression. Plots showing average expression of each sample across spatial domain show that many of these features exhibit graded expression across cortical layers suggesting that they are actually spatially variable. There is also a notable absence of outliers (which are seen with true subject-biased expression).
+
+```{r}
+#| warning: false
+check.genes = filter(top.var.df, rank_subject>30000 | rank_default>30000)$ensembl
+names(check.genes) <- rowData(spe)[check.genes,"gene_name"]
+```
+
+```{r}
+check.genes.mtx <- cbind(sapply(check.genes, function(x) logcounts(spe)[x,]))
+
+spd.expr.df = cbind.data.frame(as.data.frame(colData(spe)[,c("sample_id","subject","layer_guess_reordered_short")]),
+                               check.genes.mtx) %>%
+  group_by(sample_id, subject, layer_guess_reordered_short) %>% 
+  summarise_all(mean) %>%
+  tidyr::pivot_longer(names(check.genes),
+                      names_to="gene_name", values_to="avg.logcounts") %>%
+  filter(!is.na(layer_guess_reordered_short))
+```
+
+```{r}
+r1l = ggplot(filter(spd.expr.df, gene_name %in% c("MT-CO2","MT-ATP6")), 
+       aes(x=layer_guess_reordered_short, y=avg.logcounts, 
+                        fill=subject, color=subject))+
+  geom_boxplot()+#ylim(0,2.1)+
+  scale_color_brewer(palette="Dark2")+
+  scale_fill_brewer(palette="Dark2")+
+  facet_wrap(vars(gene_name))+
+  labs(y="mean logcounts expr")+
+  theme_bw()+theme(axis.title.x=element_blank(), legend.position="none",
+                   plot.margin=unit(c(.2,0,.2,0), units="cm"))
+r1r = ggplot(filter(spd.expr.df, gene_name %in% c("RPS26","PCSK1N","TMSB10")), 
+       aes(x=layer_guess_reordered_short, y=avg.logcounts, 
+                        fill=subject, color=subject))+
+  geom_boxplot()+#ylim(0,2.1)+
+  scale_color_brewer(palette="Dark2")+
+  scale_fill_brewer(palette="Dark2")+
+  facet_wrap(vars(gene_name), ncol=3)+
+  theme_bw()+theme(axis.title=element_blank(), legend.position="none")
+```
+
+```{r}
+r2 = ggplot(filter(spd.expr.df, gene_name %in% c("COPS9","NDUFB1","ARHGDIG","CALY","C12ord57")), 
+       aes(x=layer_guess_reordered_short, y=avg.logcounts, 
+                        fill=subject, color=subject))+
+  geom_boxplot()+#ylim(0,2.1)+
+  scale_color_brewer(palette="Dark2")+
+  scale_fill_brewer(palette="Dark2")+
+  facet_wrap(vars(gene_name), ncol=5)+
+  labs(y="mean logcounts expr")+
+  theme_bw()+theme(axis.title.x=element_blank(), legend.position="none")
+```
+
+```{r}
+r3 = ggplot(filter(spd.expr.df, gene_name %in% c("POLR2L","SELENOM","NDUFS8","FKBP2","TGFBR2L") ), 
+       aes(x=layer_guess_reordered_short, y=avg.logcounts, 
+                        fill=subject, color=subject))+
+  geom_boxplot()+#ylim(0,2.1)+
+  scale_color_brewer(palette="Dark2")+
+  scale_fill_brewer(palette="Dark2")+
+  facet_wrap(vars(gene_name), ncol=5)+
+  labs(y="mean logcounts expr")+
+  theme_bw()+theme(axis.title.x=element_blank(), legend.position="none")
+```
+
+```{r}
+r4 = ggplot(filter(spd.expr.df, gene_name %in% c("LAGE3","RASD1","RAPGEF5")), 
+       aes(x=layer_guess_reordered_short, y=avg.logcounts, 
+                        fill=subject, color=subject))+
+  geom_boxplot()+#ylim(0,2.1)+
+  scale_color_brewer(palette="Dark2")+
+  scale_fill_brewer(palette="Dark2")+
+  facet_wrap(vars(gene_name), ncol=3)+
+  labs(y="mean logcounts expr")+
+  theme_bw()+theme(axis.title.x=element_blank())
+```
+
+*Figure S3. Features flagged by the mean-variance model are not subject-biassed*
+
+```{r}
+#| fig-height: 7
+#| fig-width: 7
+lay.mat=rbind(c(1,1,2,2,2),
+              c(3,3,3,3,3),
+              c(4,4,4,4,4),
+              c(5,5,5,5,NA))
+grid.arrange(r1l, r1r, r2, r3, r4, layout_matrix=lay.mat)
+```
+
+Other than RPS26 (explored in Figure 2.9), RAPGEF5 exhibited the greatest difference in expression between subjects. However, looking at the spatial expression of RAPGEF5 indicates no subject bias.
+
+*Figure S4. RAPGEF5 is not biased by subject but correlates with WM*
+
+```{r}
+#| output: false
+rapgef5 <- plotSpots(spe, annotate=check.genes['RAPGEF5'], assay="logcounts", 
+          sample_id="sample_id", point_size=.1)+ggtitle("RAPGEF5")+
+  scale_color_gradient(low='grey90', high='black')
+mbp <- plotSpots(spe, annotate="ENSG00000197971", assay="logcounts", 
+          sample_id="sample_id", point_size=.1)+ggtitle("MBP")+
+  scale_color_gradient(low='grey90', high='black')
+```
+
+```{r}
+#| fig-height: 6
+#| fig-width: 14
+grid.arrange(mbp, rapgef5, ncol=2)
+```
+
+#### modelGeneVarByPoisson {.unnumbered}
+
+Using the `modelGeneVarByPoisson` function does identify some rank differences due to `batch= subject` but are inconsistent (reproducibility). Using the poisson assumptions for technical variation reduced the number of features that were highly ranked with `batch= NULL` and highly ranked with `batch= subject` (compared to `modelGeneVar`).
+
+```{r}
+#| echo: true
+mvp.batch <- modelGeneVarByPoisson(logcounts(spe), block=as.factor(spe$subject))
+```
+
+```{r}
+mvp.batch$ensembl = rownames(mvp.batch)
+mvp.batch$rank = (nrow(mvp.batch)+1)-rank(mvp.batch$bio)
+
+varp.df = left_join(repro.mvp,
+                   as.data.frame(mvp.batch[,
+                                          c("ensembl","bio","rank")]),
+                   by=c("ensembl"))
+varp.df$gene_name = rowData(spe)[varp.df$ensembl,"gene_name"]
+```
+
+```{r}
+p5 <- ggplot(varp.df, aes(x=rank_1, y=rank))+
+  geom_point(size=.5)+
+  labs(x="rank (no batch)", y="rank (batch)", title="run 1")+
+  theme_bw()
+```
+
+```{r}
+p6 <- ggplot(varp.df, aes(x=rank_2, y=rank))+
+  geom_point(size=.5)+
+  labs(x="rank (no batch)", y="rank (batch)", title="run 2")+
+  theme_bw()
+```
+
+*Figure S5. Feature ranks based on mean-variance modeling are not consistent when batch effects are added*
+
+```{r}
+#| fig-height: 2.5
+#| fig-width: 7.5
+grid.arrange(p3, p5, p6, ncol=3)
+```
+
+```{r}
+top.varp.df1 <- filter(varp.df, rank_1<=3000 | rank<=3000)
+top.varp.df2 <- filter(varp.df, rank_2<=3000 | rank<=3000)
+```
+
+```{r}
+p7 <- ggplot(top.varp.df1, aes(x=rank_1, y=rank))+
+  geom_point(size=.5)+#xlim(0,33000)+
+    geom_point(data=filter(top.varp.df1, rank_1>30000 | rank>30000),
+             color="red", size=.5)+
+  scale_y_break(c(15000,30000))+
+  geom_text_repel(data=filter(top.varp.df1, rank>30000), 
+                  aes(label=gene_name), size=3)+
+  labs(x="rank (no batch)", y="rank (batch)", title="run 1")+
+  theme_bw()
+```
+
+```{r}
+p8 <- ggplot(top.varp.df2, aes(x=rank_2, y=rank))+
+  geom_point(size=.5)+#xlim(0,33000)+
+    geom_point(data=filter(top.varp.df2, rank_2>30000 | rank>30000),
+             color="red", size=.5)+
+  scale_y_break(c(15000,30000))+
+  geom_text_repel(data=filter(top.varp.df2, rank>30000), 
+                  aes(label=gene_name), size=3)+
+  labs(x="rank (no batch)", y="rank (batch)", title="run 2")+
+  theme_bw()
+```
+
+The small changes in variance between identical models can lead to changes in top ranked features and thus alter which genes are available to examine for subject-bias.
+
+*Figure S6. Top 3k features: Introduction of batch to poisson mean-variance model and inconsistencies between runs*
+
+```{r}
+#| fig-height: 4
+#| fig-width: 7
+grid.arrange(print(p7), print(p8), ncol=2)
+```
+
+*Figure S7. COMMD6 expression is not influenced by subject identity*
+
+```{r}
+#| warning: false
+#| fig-height: 5
+#| fig-width: 6
+plotSpots(spe, annotate="ENSG00000188243", assay="logcounts", 
+          sample_id="sample_id", point_size=.1)+ggtitle("COMMD6")+
+  scale_color_gradient(low='grey90', high='black')
+```
+
+## Odd sinusoidal pattern in binomial deviance model?
+
+We found an add sinusoidal pattern emerges when comparing ranks from `scry::devianceFeatureSelection` with any dataset. This only occurs in the worst ranking features and so doesn't appear when limiting the binomial deviance model to SVGs. We would anticipate increased noise in the relationship between ranks produced from the different models (with and without batch), but this structured pattern is odd.
+
+### spatialLIBD
+
+```{r}
+#| echo: true
+bd <- devianceFeatureSelection(counts(spe), fam="binomial")
+bd.batch <- devianceFeatureSelection(counts(spe), fam="binomial", 
+                                     batch=as.factor(spe$subject))
+```
+
+```{r}
+bd1 <- devianceFeatureSelection(counts(spe), fam="binomial")
+```
+
+```{r}
+bd.df = cbind.data.frame("gene"=names(bd),
+                         "gene_name"=rowData(spe)[names(bd),"gene_name"],
+                         "dev"= bd,
+                         "rank"=(length(bd)+1)-rank(bd))
+rownames(bd.df) = bd.df$gene
+```
+
+```{r}
+bd.batch.df = cbind.data.frame("gene"=rownames(spe),
+                               "gene_name"=rowData(spe)$gene_name,
+                               "dev"= bd.batch,
+                               "rank"=(length(bd.batch)+1)-rank(bd.batch))
+rownames(bd.batch.df) = bd.batch.df$gene
+```
+
+```{r}
+dev.df = left_join(bd.df, bd.batch.df,
+                   by=c("gene","gene_name"), suffix=c("_default","_subject"))
+```
+
+```{r}
+p3 <- ggplot(dev.df, aes(x=rank_default, y=rank_subject))+
+  geom_point(size=.5)+
+  labs(x="rank (no batch)", y="rank (batch)", title="binomial deviance")+
+  theme_bw()
+```
+
+```{r}
+p4 <- ggplot(filter(dev.df, rank_default>22000 | rank_subject>22000), 
+       aes(x=rank_default, y=rank_subject))+
+  geom_point(size=.5)+
+  labs(x="rank (no batch)", y="rank (batch)", title="(zoomed)")+
+  theme_bw()
+```
+
+*Figure S8. Influence of subject identity on rank calculated from binomial deviance model (all features)*
+
+```{r}
+#| fig-height: 3
+#| fig-width: 6
+grid.arrange(p3, p4, ncol=2)
+```
+
+This is true when we change the seed.
+
+```{r}
+#| echo: true
+set.seed(456)
+bd2 <- devianceFeatureSelection(counts(spe), fam="binomial")
+bd2.batch <- devianceFeatureSelection(counts(spe), fam="binomial", 
+                                     batch=as.factor(spe$subject))
+```
+
+```{r}
+bd2.df = cbind.data.frame("gene"=names(bd2),
+                         "gene_name"=rowData(spe)[names(bd2),"gene_name"],
+                         "dev"= bd2,
+                         "rank"=(length(bd2)+1)-rank(bd2))
+rownames(bd2.df) = bd2.df$gene
+```
+
+```{r}
+bd2.batch.df = cbind.data.frame("gene"=rownames(spe),
+                               "gene_name"=rowData(spe)$gene_name,
+                               "dev"= bd2.batch,
+                               "rank"=(length(bd2.batch)+1)-rank(bd2.batch))
+rownames(bd2.batch.df) = bd2.batch.df$gene
+```
+
+```{r}
+dev.df2 = left_join(bd2.df, bd2.batch.df,
+                   by=c("gene","gene_name"), suffix=c("_default","_subject"))
+```
+
+```{r}
+p5 <- ggplot(dev.df2, aes(x=rank_default, y=rank_subject))+
+  geom_point(size=.5)+
+  labs(x="rank (no batch)", y="rank (batch)", title="binomial deviance")+
+  theme_bw()
+```
+
+```{r}
+p6 <- ggplot(filter(dev.df2, rank_default>22000 | rank_subject>22000), 
+       aes(x=rank_default, y=rank_subject))+
+  geom_point(size=.5)+
+  labs(x="rank (no batch)", y="rank (batch)", title="(zoomed)")+
+  theme_bw()
+```
+
+*Figure S9. The linear relationship between feature ranks and the sinusoidal pattern are reproducible with different random number seeds*
+
+```{r}
+#| fig-height: 3
+#| fig-width: 6
+grid.arrange(p5, p6, ncol=2)
+```
+
+### MBv dataset
+
+The effect is also seen in our MBv dataset.
+
+```{r}
+slide.df <- read.csv("processed-data/bindev_default-slide.csv")
+brain.df <- read.csv("processed-data/bindev_default-brain.csv")
+```
+
+```{r}
+p7 <- ggplot(filter(slide.df, rank_default>22000 | rank_slide>22000), 
+       aes(x=rank_default, y=rank_slide))+
+  geom_point(size=.5)+
+  labs(x="rank (no batch)", y="rank (batch)", title="batch= slide")+
+  theme_bw()
+```
+
+```{r}
+p8 <- ggplot(filter(brain.df, rank_default>22000 | rank_brain>22000), 
+       aes(x=rank_default, y=rank_brain))+
+  geom_point(size=.5)+
+  labs(x="rank (no batch)", y="rank (batch)", title="batch= subject")+
+  theme_bw()
+```
+
+*Figure S10. Sinusoidal pattern in MBv data when comparing two different batch effects*
+
+```{r}
+#| fig-height: 3
+#| fig-width: 6
+grid.arrange(p7, p8, ncol=2)
+```
