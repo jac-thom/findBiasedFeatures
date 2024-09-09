@@ -28,3 +28,4 @@ write.csv(counts(spe_sub4)[1001:2082,], "/users/jthompso/BiasedFeatures_hpc/fina
 write.csv(colData(spe_sub4)[,c("sample_id","slide","brnum","array","sex","in_tissue","array_row","array_col","sum_umi","sum_gene","expr_chrM","expr_chrM_ratio")],
           "/users/jthompso/BiasedFeatures_hpc/final/spe-hpc_sub4_svgs-only_colData.csv", row.names=T)
 write.csv(rowData(spe_sub4), "/users/jthompso/BiasedFeatures_hpc/final/spe-hpc_sub4_svgs-only_rowData.csv", row.names=T)
+write.csv(spatialCoords(spe_sub4), "/users/jthompso/BiasedFeatures_hpc/final/spe-hpc_sub4_svgs-only_spatialCoords.csv", row.names=T)
